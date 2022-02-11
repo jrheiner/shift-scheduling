@@ -2,8 +2,10 @@
 name = "shift-scheduling"
 version = "0.1.0"
 description = ""
-authors = ["ferdinand-dhbw <65330418+ferdinand-dhbw@users.noreply.github.com>"]
-
+authors = [
+    "Ferdinand Koenig",
+    "Jonas Rheiner"
+]
 [tool.poetry.dependencies]
 python = "^3.8"
 
