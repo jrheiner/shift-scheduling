@@ -8,6 +8,9 @@ authors = [
 ]
 [tool.poetry.dependencies]
 python = "^3.8"
+jsonschema = "^4.4.0"
+networkx = "^2.6.3"
+fuzzy-graph-coloring = {path = "fgc/fuzzy_graph_coloring-0.1.0-py3-none-any.whl"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
