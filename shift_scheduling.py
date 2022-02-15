@@ -50,19 +50,22 @@ def _alpha_cut(graph: nx.Graph, alpha: float) -> nx.Graph:
     return g
 
 
-def _draw_weighted_graph(graph: nx.Graph, shifts_per_day):
+def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, cm=None):
     """
     Plots a given NetworkX graph and labels edges according to their assigned weight.
 
     :param graph: NetworkX graph
     :return: None
     """
-    pos = {s: (shifts_per_day * int(s.split(".")[0]) * 1.2 + int(s.split(".")[1]),
+    pos = {s: (shifts_per_day * int(s.split(".")[0]) * 1.3 + int(s.split(".")[1]) + 0.3 * (int(s.split(".")[2]) % 2),
                int(s.split(".")[2]))
            for s in graph.nodes()}
     nx.draw(graph, pos,
-            labels={node: node for node in graph.nodes()})
-    nx.draw_networkx_edge_labels(graph, pos, edge_labels=nx.get_edge_attributes(graph, "weight"))
+            labels={node: node for node in graph.nodes()},
+            node_size=1e3,
+            node_color=cm,
+            cmap=plt.cm.tab10)  # TODO Does just work until 10
+    # nx.draw_networkx_edge_labels(graph, pos, edge_labels=nx.get_edge_attributes(graph, "weight"))
     plt.show()
 
 
@@ -80,8 +83,10 @@ def create_schedule(input_path: str):
                         f"(A {input_data['total_staff']}-coloring does not exist.)")
     fuzzy_coloring, score = fuzzy_color(graph, input_data["total_staff"])
 
+    _draw_weighted_graph(graph, input_data["shifts"], cm=[fuzzy_coloring.get(node) for node in graph])
     print(crisp_coloring)
-    print(fuzzy_coloring, score)
+    _draw_weighted_graph(graph, input_data["shifts"], cm=[crisp_coloring.get(node) for node in graph])
+    print(score, fuzzy_coloring)
     # interpret_graph()
     pass
 
@@ -108,7 +113,7 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
 
 
 def fuzzy_color(graph: nx.Graph, k):
-    return fgc.fuzzy_color(graph, k=k)
+    return fgc.fuzzy_color(graph, k=k, num_generations=50)
 
 
 def interpret_graph():
