@@ -57,7 +57,7 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day):
     :param graph: NetworkX graph
     :return: None
     """
-    pos = {s: (shifts_per_day * int(s.split(".")[0]) + int(s.split(".")[1]),
+    pos = {s: (shifts_per_day * int(s.split(".")[0]) * 1.2 + int(s.split(".")[1]),
                int(s.split(".")[2]))
            for s in graph.nodes()}
     nx.draw(graph, pos,

@@ -4,5 +4,5 @@
     "total_staff": 6,
     "days_of_week": ["mo", "tu", "we", "th", "fr"],
     "start_day": "tu",
-    "period": "2d"
+    "period": "4d"
 }
