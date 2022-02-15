@@ -1,5 +1,6 @@
 from jsonschema import validate, ValidationError
 import networkx as nx
+import fuzzy_graph_coloring as fgc
 import json
 
 
@@ -40,19 +41,27 @@ def _alpha_cut(graph: nx.Graph, alpha: float) -> nx.Graph:
 
 
 def create_schedule(input_path: str):
-    # graph = generate_graph(input_path)
-    # crisp_coloring = nx.greedy_color(graph)
-    # fuzzy_coloring, score = fuzzy_color(graph)
+    graph, input_data = generate_graph(input_path)
+    crisp_coloring = nx.greedy_color(_alpha_cut(graph, alpha=1))
+    k = max(crisp_coloring.values()) + 1
+    if k > input_data["total_staff"]:
+        raise Exception("Even by considering only hard constraints, a schedule is not possible."
+                        f"(A {input_data['total_staff']}-coloring does not exist.)")
+    fuzzy_coloring, score = fuzzy_color(graph, input_data["total_staff"])
+    print(crisp_coloring)
+    print(fuzzy_coloring, score)
+    # interpret_graph()
     pass
 
 
 def generate_graph(input_path: str) -> nx.Graph:
     # input_data = _parse_input(input_path)
-    pass
+    graph = nx.Graph()
+    return graph
 
 
-def fuzzy_color(graph: nx.Graph):
-    pass
+def fuzzy_color(graph: nx.Graph, k):
+    return fgc.fuzzy_color(graph, k=k)
 
 
 def interpret_graph():
