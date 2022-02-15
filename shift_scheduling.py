@@ -28,7 +28,7 @@ def _alpha_cut(graph: nx.Graph, alpha: float) -> nx.Graph:
     """
     Alpha-cut for a given NetworkX Graph. Needs attribute "weight" on edges and removes nodes that are not connected
     anymore.
-    :param graph: NetworkX Graph which edges have attribute "weight"
+    :param graph: NetworkX Graph which edges have an attribute "weight"
     :param alpha: Float number for alpha-cut
     :return: Alpha-cut graph
     """
