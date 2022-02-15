@@ -1,3 +1,5 @@
+from typing import Tuple, Any
+
 from jsonschema import validate, ValidationError
 import networkx as nx
 import fuzzy_graph_coloring as fgc
@@ -18,6 +20,13 @@ def _parse_input(input_path: str) -> dict:
         except ValidationError as ve:
             print(ve)
             raise ve
+    period = input_data["period"]
+    if period[-1:] == "d":
+        input_data["period"] = int(period[:-1])
+    elif period[-1:] == "w":
+        input_data["period"] = int(period[:-1])*7
+    else:
+        raise Exception("todo json schema validation")
     return input_data
 
 
@@ -36,13 +45,14 @@ def _alpha_cut(graph: nx.Graph, alpha: float) -> nx.Graph:
     g = nx.Graph()
     for u, v, a in graph.edges(data=True):
         if a["weight"] >= alpha:
-            g.add_edge(u, v, a)
+            g.add_edge(u, v, **a)
     return g
 
 
 def create_schedule(input_path: str):
     graph, input_data = generate_graph(input_path)
     crisp_coloring = nx.greedy_color(_alpha_cut(graph, alpha=1))
+    print(crisp_coloring)
     k = max(crisp_coloring.values()) + 1
     if k > input_data["total_staff"]:
         raise Exception("Even by considering only hard constraints, a schedule is not possible."
@@ -54,14 +64,18 @@ def create_schedule(input_path: str):
     pass
 
 
-def generate_graph(input_path: str) -> nx.Graph:
-    # input_data = _parse_input(input_path)
-    graph = nx.Graph()
-    return graph
+def generate_graph(input_path: str) -> Tuple[Any, dict]:
+    input_data = _parse_input(input_path)
+    nodes = [f"0.{s}.{p}"
+             for s in range(input_data["shifts"])
+             for p in range(input_data["staff_per_shift"])]  # [D].[S].[P] # 0.0.1 = Monika: 1st day, 1st shift, 2nd pos
+    graph = nx.complete_graph(nodes)
+    nx.set_edge_attributes(graph, 1, "weight")
+    return graph, input_data
 
 
 def fuzzy_color(graph: nx.Graph, k):
-    return fgc.fuzzy_color(graph, k=k)
+    return fgc.fuzzy_color(graph, k=k, verbose=True)
 
 
 def interpret_graph():
