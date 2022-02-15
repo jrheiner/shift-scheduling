@@ -86,7 +86,7 @@ def create_schedule(input_path: str):
     pass
 
 
-def generate_graph(input_path: str) -> Tuple[Any, dict]:
+def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
     input_data = _parse_input(input_path)
     for d in range(input_data["period"]):
         nodes = [f"{d}.{s}.{p}"
