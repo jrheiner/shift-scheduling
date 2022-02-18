@@ -174,6 +174,7 @@ def _calculate_fairness(coloring: dict):
     :param coloring:
     :return: Negative standard deviation of assigned shifts per staff member
     """
+    print(list(Counter(coloring.values()).values()))
     return - np.std(list(Counter(coloring.values()).values()))
 
 
