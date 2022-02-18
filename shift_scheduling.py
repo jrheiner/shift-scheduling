@@ -75,17 +75,13 @@ def create_schedule(input_path: str):
     if graph.number_of_nodes() < input_data["total_staff"]:
         raise Exception("There are more members in your team than available shifts")
 
-    crisp_coloring = nx.greedy_color(_alpha_cut(graph, alpha=1))
-
-    k = max(crisp_coloring.values()) + 1
-    if k > input_data["total_staff"]:
+    try:
+        fuzzy_coloring, score = fuzzy_color(graph, input_data["total_staff"])
+    except fgc.NoSolutionException:
         raise Exception("Even by considering only hard constraints, a schedule is not possible. "
                         f"(A {input_data['total_staff']}-coloring does not exist.)")
-    fuzzy_coloring, score = fuzzy_color(graph, input_data["total_staff"])
 
     _draw_weighted_graph(graph, input_data["shifts"], cm=[fuzzy_coloring.get(node) for node in graph])
-    print(crisp_coloring)
-    _draw_weighted_graph(graph, input_data["shifts"], cm=[crisp_coloring.get(node) for node in graph])
     print(score, fuzzy_coloring)
     # interpret_graph()
     pass
@@ -113,8 +109,10 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
 
 
 def fuzzy_color(graph: nx.Graph, k):
-    print("k= ", k)
-    return fgc.alpha_fuzzy_color(graph, k)
+    try:
+        return fgc.alpha_fuzzy_color(graph, k, fair=True)
+    except fgc.NoSolutionException:
+        return fgc.alpha_fuzzy_color(graph, k)
 
 
 def interpret_graph():
