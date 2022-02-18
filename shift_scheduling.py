@@ -2,11 +2,13 @@ import csv
 import datetime
 import json
 from typing import Tuple
+from collections import Counter
 
 import fuzzy_graph_coloring as fgc
 import matplotlib.pyplot as plt
 import networkx as nx
 from jsonschema import validate, ValidationError
+import numpy as np
 
 
 def _parse_input(input_path: str) -> dict:
@@ -27,10 +29,6 @@ def _parse_input(input_path: str) -> dict:
     input_data["start_end"] = datetime.datetime.strptime(input_data["start_end"], "%Y-%m-%d")
     input_data["period"] = (input_data["start_end"] - input_data["start_day"]).days + 1
     return input_data
-
-
-def _check_hard_constraints() -> bool:
-    return False
 
 
 def _alpha_cut(graph: nx.Graph, alpha: float) -> nx.Graph:
@@ -81,6 +79,7 @@ def create_schedule(input_path: str):
 
     _draw_weighted_graph(graph, input_data["shifts"], cm=[fuzzy_coloring.get(node) for node in graph])
     print(score, fuzzy_coloring)
+    print(_calculate_fairness(fuzzy_coloring))
     interpret_graph(graph, fuzzy_coloring, input_data)
 
 
@@ -99,7 +98,7 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
         if total_days == 0:
             graph = nx.complete_graph(nodes)
             # Schicht: max(s)
-        elif _get_weekday(input_data["start_day"] + datetime.timedelta(days=total_days - 1))\
+        elif _get_weekday(input_data["start_day"] + datetime.timedelta(days=total_days - 1)) \
                 in input_data["days_of_week"]:
             # Schicht: 0
             connect_nodes = [f"{total_days - 1}.{input_data['shifts'] - 1}.{p}" for p in
@@ -167,6 +166,15 @@ def _get_weekday(date: datetime):
         6: "Su"
     }
     return weekday.get(date.weekday())
+
+
+def _calculate_fairness(coloring: dict):
+    """
+    Gives a score for the fairness of a coloring
+    :param coloring:
+    :return: Negative standard deviation of assigned shifts per staff member
+    """
+    return - np.std(list(Counter(coloring.values()).values()))
 
 
 if __name__ == '__main__':
