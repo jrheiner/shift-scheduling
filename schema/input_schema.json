@@ -1,107 +1,116 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema",
-    "$id": "shift-scheduling/schema/input_schema.json",
-    "type": "object",
-    "title": "The root schema for input",
-    "description": "The root schema for input data for WCSP for shift scheduling",
-    "default": {},
-    "examples": [
-        {
-            "shifts": 2,
-            "staff_per_shift": 3,
-            "total_staff": 15,
-            "days_of_week": [
-                "mo",
-                "tu",
-                "we",
-                "th",
-                "fr"
-            ],
-            "start_day": "tu",
-            "period": "26d"
-        }
-    ],
-    "required": [
-        "shifts",
-        "staff_per_shift",
-        "total_staff",
-        "days_of_week",
-        "start_day",
-        "period"
-    ],
-    "properties": {
-        "shifts": {
-            "$id": "#/properties/shifts",
-            "type": "integer",
-            "title": "The shifts schema",
-            "description": "The number of shifts per day.",
-            "default": 0,
-            "examples": [
-                2
-            ]
-        },
-        "staff_per_shift": {
-            "$id": "#/properties/staff_per_shift",
-            "type": "integer",
-            "title": "The staff_per_shift schema",
-            "description": "The number of staff members needed per shift.",
-            "default": 0,
-            "examples": [
-                3
-            ]
-        },
-        "total_staff": {
-            "$id": "#/properties/total_staff",
-            "type": "integer",
-            "title": "The total_staff schema",
-            "description": "The amount of available staff members.",
-            "default": 0,
-            "examples": [
-                15
-            ]
-        },
-        "days_of_week": {
-            "$id": "#/properties/days_of_week",
-            "type": "array",
-            "title": "The days_of_week schema",
-            "description": "Working days of a week.",
-            "default": [],
-            "examples": [
-                [
-                    "mo",
-                    "tu"
-                ]
-            ],
-            "additionalItems": true,
-            "items": {
-                "$id": "#/properties/days_of_week/items",
-                "type": "string",
-                "enum": ["mo","tu","we","th","fr","sa","so"],
-                "title": "Day of the week",
-                "default": ""
-            }
-        },
-        "start_day": {
-            "$id": "#/properties/start_day",
-            "type": "string",
-            "enum": ["mo","tu","we","th","fr","sa","so"],
-            "title": "The start_day schema",
-            "description": "The start day of the timetable.",
-            "default": "",
-            "examples": [
-                "tu"
-            ]
-        },
-        "period": {
-            "$id": "#/properties/period",
-            "type": "string",
-            "title": "The period schema",
-            "description": "The period for which a time schedule is requested.",
-            "default": "",
-            "examples": [
-                "26d"
-            ]
-        }
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "shift-scheduling/schema/input_schema.json",
+  "type": "object",
+  "title": "The root schema for input",
+  "description": "The root schema for input data for WCSP for shift scheduling",
+  "default": {},
+  "examples": [
+    {
+      "shifts": 2,
+      "staff_per_shift": 3,
+      "total_staff": 15,
+      "days_of_week": [
+        "Mo",
+        "Tu",
+        "We",
+        "Th",
+        "Fr"
+      ],
+      "start_day": "2022-02-18",
+      "start_end": "2022-02-25"
+    }
+  ],
+  "required": [
+    "shifts",
+    "staff_per_shift",
+    "total_staff",
+    "days_of_week",
+    "start_day",
+    "start_end"
+  ],
+  "properties": {
+    "shifts": {
+      "$id": "#/properties/shifts",
+      "type": "integer",
+      "title": "The shifts schema",
+      "description": "The number of shifts per day.",
+      "default": 0,
+      "examples": [
+        2
+      ]
     },
-    "additionalProperties": true
+    "staff_per_shift": {
+      "$id": "#/properties/staff_per_shift",
+      "type": "integer",
+      "title": "The staff_per_shift schema",
+      "description": "The number of staff members needed per shift.",
+      "default": 0,
+      "examples": [
+        3
+      ]
+    },
+    "total_staff": {
+      "$id": "#/properties/total_staff",
+      "type": "integer",
+      "title": "The total_staff schema",
+      "description": "The amount of available staff members.",
+      "default": 0,
+      "examples": [
+        15
+      ]
+    },
+    "days_of_week": {
+      "$id": "#/properties/days_of_week",
+      "type": "array",
+      "title": "The days_of_week schema",
+      "description": "Working days of a week.",
+      "default": [],
+      "examples": [
+        [
+          "Mo",
+          "Tu"
+        ]
+      ],
+      "additionalItems": true,
+      "items": {
+        "$id": "#/properties/days_of_week/items",
+        "type": "string",
+        "enum": [
+          "Mo",
+          "Tu",
+          "We",
+          "Th",
+          "Fr",
+          "Sa",
+          "So"
+        ],
+        "title": "Day of the week",
+        "default": ""
+      }
+    },
+    "start_day": {
+      "$id": "#/properties/start_day",
+      "type": "string",
+      "format": "date",
+      "title": "The start_day schema",
+      "description": "The start day of the timetable.",
+      "default": "",
+      "examples": [
+        "2022-02-18"
+      ]
+    },
+    "period": {
+      "$id": "#/properties/start_end",
+      "type": "string",
+      "format": "date",
+      "title": "The period schema",
+      "description": "The end day of the timetable.",
+      "default": "",
+      "examples": [
+        "2022-02-25"
+      ]
+    }
+  },
+  "additionalProperties": true
 }
