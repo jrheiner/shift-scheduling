@@ -113,7 +113,7 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
 
 
 def fuzzy_color(graph: nx.Graph, k):
-    return fgc.fuzzy_color(graph, k=k, num_generations=50)
+    return fgc.fuzzy_color(graph, k=k, num_generations=70, solutions_per_pop=200)
 
 
 def interpret_graph():
