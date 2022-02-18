@@ -745,7 +745,7 @@ fonttools = [
     {file = "fonttools-4.29.1.zip", hash = "sha256:2b18a172120e32128a80efee04cff487d5d140fe7d817deb648b2eee023a40e4"},
 ]
 fuzzy-graph-coloring = [
-    {file = "fuzzy_graph_coloring-0.1.0-py3-none-any.whl", hash = "sha256:3e560ea2f46d3a072b17f1663bac9a8aaba14b7779f9690b29f7e2d53b3314a7"},
+    {file = "fuzzy_graph_coloring-0.1.0-py3-none-any.whl", hash = "sha256:0fe63a63117eddee7380f53a12fd4a6e7ce777aada36a7f401a8c7da2efffb2c"},
 ]
 identify = [
     {file = "identify-2.4.9-py2.py3-none-any.whl", hash = "sha256:bff7c4959d68510bc28b99d664b6a623e36c6eadc933f89a4e0a9ddff9b4fee4"},
