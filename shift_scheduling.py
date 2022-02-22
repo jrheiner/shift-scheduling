@@ -68,6 +68,7 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, cm=None):
 def create_schedule(input_path: str):
     graph, input_data = generate_graph(input_path)
     _draw_weighted_graph(graph, input_data["shifts"])
+    print(max(nx.greedy_color(graph).values()))
     if graph.number_of_nodes() < input_data["total_staff"]:
         raise Exception("There are more members in your team than available shifts")
 
