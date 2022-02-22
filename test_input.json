@@ -1,7 +1,7 @@
 {
-  "shifts": 2,
-  "staff_per_shift": 3,
-  "total_staff": 6,
+  "shifts": 3,
+  "staff_per_shift": 20,
+  "total_staff": 80,
   "days_of_week": [
     "Mo",
     "Tu",
@@ -9,6 +9,6 @@
     "Th",
     "Fr"
   ],
-  "start_day": "2022-02-18",
-  "start_end": "2022-02-25"
+  "start_day": "2022-02-2",
+  "start_end": "2022-02-3"
 }

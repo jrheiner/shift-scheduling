@@ -7,7 +7,7 @@ from collections import Counter
 import fuzzy_graph_coloring as fgc
 import matplotlib.pyplot as plt
 import networkx as nx
-from jsonschema import validate, ValidationError
+from jsonschema import validate
 import numpy as np
 
 
@@ -20,14 +20,17 @@ def _parse_input(input_path: str) -> dict:
     with open(input_path, "r") as input_file, open("schema/input_schema.json") as schema_file:
         schema = json.load(schema_file)
         input_data = json.load(input_file)
-        try:
-            validate(instance=input_data, schema=schema)
-        except ValidationError as ve:
-            print(ve)
-            raise ve
+        validate(instance=input_data, schema=schema)
+    assert input_data["shifts"] * input_data["staff_per_shift"] <= input_data["total_staff"], \
+        f"Invalid configuration. With only {input_data['total_staff']} staff members a schedule with " \
+        f"{input_data['shifts']} shifts and {input_data['staff_per_shift']} staff members per shift is not possible."
+
     input_data["start_day"] = datetime.datetime.strptime(input_data["start_day"], "%Y-%m-%d")
     input_data["start_end"] = datetime.datetime.strptime(input_data["start_end"], "%Y-%m-%d")
     input_data["period"] = (input_data["start_end"] - input_data["start_day"]).days + 1
+    assert input_data["period"] > 0, \
+        f"Invalid configuration. Start date ({input_data['start_day'].strftime('%Y-%m-%d')}) is after " \
+        f"end date ({input_data['start_end'].strftime('%Y-%m-%d')})."
     return input_data
 
 
@@ -68,7 +71,7 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, cm=None):
 def create_schedule(input_path: str):
     graph, input_data = generate_graph(input_path)
     _draw_weighted_graph(graph, input_data["shifts"])
-    print(max(nx.greedy_color(graph).values()))
+
     if graph.number_of_nodes() < input_data["total_staff"]:
         raise Exception("There are more members in your team than available shifts")
 
@@ -113,23 +116,6 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
             graph = nx.compose_all([graph2, graph])
         total_days += 1
     nx.set_edge_attributes(graph, 1, "weight")
-
-    # for d in range(input_data["period"]):
-    #     nodes = [f"{d}.{s}.{p}"
-    #              for s in range(input_data["shifts"])
-    #              for p in range(input_data["staff_per_shift"])]
-    #     # [D].[S].[P] # 0.0.1 = Monika: 1st day, 1st shift, 2nd pos
-    #     if d == 0:
-    #         graph = nx.complete_graph(nodes)
-    #         # Schicht: max(s)
-    #     else:
-    #         # Schicht: 0
-    #         connect_nodes = [f"{d - 1}.{input_data['shifts'] - 1}.{p}" for p in range(input_data["staff_per_shift"])]
-    #         connect_nodes.extend([f"{d}.0.{p}" for p in range(input_data["staff_per_shift"])])
-    #         connect_days = nx.complete_graph(connect_nodes)
-    #         graph2 = nx.complete_graph(nodes)
-    #         graph = nx.compose_all([graph2, graph, connect_days])
-    # nx.set_edge_attributes(graph, 1, "weight")
     return graph, input_data
 
 
@@ -137,6 +123,7 @@ def fuzzy_color(graph: nx.Graph, k):
     try:
         return fgc.alpha_fuzzy_color(graph, k, fair=True)
     except fgc.NoSolutionException:
+        print("Unfair")
         return fgc.alpha_fuzzy_color(graph, k)
 
 
