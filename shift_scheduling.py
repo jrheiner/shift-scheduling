@@ -1,8 +1,8 @@
 import csv
 import datetime
-import functools
+# import functools
 import json
-import timeit
+# import timeit
 from typing import Tuple
 from collections import Counter
 
@@ -122,11 +122,10 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
 
 
 def fuzzy_color(graph: nx.Graph, k):
-    t = timeit.Timer(functools.partial(fgc.fuzzy_color, graph, k, verbose=True))
-    r = t.repeat(10, 1)
-    print(r)
-    print(np.mean(r), np.std(r))
-    return fgc.fuzzy_color(graph, k, verbose=True)
+    # t = timeit.Timer(functools.partial(fgc.alpha_fuzzy_color, graph, k, fair=True))
+    # r = t.repeat(100, 1)
+    # print(r)
+    # print(np.mean(r), np.std(r))
     try:
         return fgc.alpha_fuzzy_color(graph, k, fair=True)
     except fgc.NoSolutionException:
