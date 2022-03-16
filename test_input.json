@@ -7,8 +7,13 @@
     "Tu",
     "We",
     "Th",
-    "Fr"
+    "Fr",
+    "Sa",
+    "So"
   ],
-  "start_day": "2022-02-2",
-  "start_end": "2022-02-10"
+  "start_date": "2022-02-2",
+  "end_date": "2022-02-24",
+  "soft_constraints": {
+    "balanced_weekends": true
+  }
 }

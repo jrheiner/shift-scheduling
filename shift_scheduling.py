@@ -2,15 +2,15 @@ import csv
 import datetime
 # import functools
 import json
+from collections import Counter
 # import timeit
 from typing import Tuple
-from collections import Counter
 
 import fuzzy_graph_coloring as fgc
 import matplotlib.pyplot as plt
 import networkx as nx
-from jsonschema import validate
 import numpy as np
+from jsonschema import validate
 
 
 def _parse_input(input_path: str) -> dict:
@@ -27,12 +27,12 @@ def _parse_input(input_path: str) -> dict:
         f"Invalid configuration. With only {input_data['total_staff']} staff members a schedule with " \
         f"{input_data['shifts']} shifts and {input_data['staff_per_shift']} staff members per shift is not possible."
 
-    input_data["start_day"] = datetime.datetime.strptime(input_data["start_day"], "%Y-%m-%d")
-    input_data["start_end"] = datetime.datetime.strptime(input_data["start_end"], "%Y-%m-%d")
-    input_data["period"] = (input_data["start_end"] - input_data["start_day"]).days + 1
+    input_data["start_date"] = datetime.datetime.strptime(input_data["start_date"], "%Y-%m-%d")
+    input_data["end_date"] = datetime.datetime.strptime(input_data["end_date"], "%Y-%m-%d")
+    input_data["period"] = (input_data["end_date"] - input_data["start_date"]).days + 1
     assert input_data["period"] > 0, \
-        f"Invalid configuration. Start date ({input_data['start_day'].strftime('%Y-%m-%d')}) is after " \
-        f"end date ({input_data['start_end'].strftime('%Y-%m-%d')})."
+        f"Invalid configuration. Start date ({input_data['start_date'].strftime('%Y-%m-%d')}) is after " \
+        f"end date ({input_data['end_date'].strftime('%Y-%m-%d')})."
     return input_data
 
 
@@ -91,33 +91,60 @@ def create_schedule(input_path: str):
 
 def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
     input_data = _parse_input(input_path)
-    total_days = 0
-    while total_days < input_data["period"]:
-        if _get_weekday(input_data["start_day"] + datetime.timedelta(days=total_days)) \
-                not in input_data["days_of_week"]:
-            total_days += 1
+    current_day_id = 0
+    while current_day_id < input_data["period"]:
+        today = input_data["start_date"] + datetime.timedelta(days=current_day_id)
+        yesterday = input_data["start_date"] + datetime.timedelta(days=current_day_id - 1)
+        if _get_weekday(today) not in input_data["days_of_week"]:
+            current_day_id += 1
             continue
-        nodes = [f"{total_days}.{s}.{p}"
+        nodes = [f"{current_day_id}.{s}.{p}"
                  for s in range(input_data["shifts"])
                  for p in range(input_data["staff_per_shift"])]
         # [D].[S].[P] # 0.0.1 = Monika: 1st day, 1st shift, 2nd pos
-        if total_days == 0:
+        if current_day_id == 0:
             graph = nx.complete_graph(nodes)
+            nx.set_edge_attributes(graph, 1, "weight")
             # Schicht: max(s)
-        elif _get_weekday(input_data["start_day"] + datetime.timedelta(days=total_days - 1)) \
-                in input_data["days_of_week"]:
+        elif _get_weekday(yesterday) in input_data["days_of_week"]:
             # Schicht: 0
-            connect_nodes = [f"{total_days - 1}.{input_data['shifts'] - 1}.{p}" for p in
+            connect_nodes = [f"{current_day_id - 1}.{input_data['shifts'] - 1}.{p}" for p in
                              range(input_data["staff_per_shift"])]
-            connect_nodes.extend([f"{total_days}.0.{p}" for p in range(input_data["staff_per_shift"])])
+            connect_nodes.extend([f"{current_day_id}.0.{p}" for p in range(input_data["staff_per_shift"])])
             connect_days = nx.complete_graph(connect_nodes)
+            nx.set_edge_attributes(connect_days, 1, "weight")
             graph2 = nx.complete_graph(nodes)
+            nx.set_edge_attributes(graph2, 1, "weight")
             graph = nx.compose_all([graph2, graph, connect_days])
+
+            # add soft constraint "balanced_weekends"
+            try:
+                balanced_weekends_constraint = input_data["soft_constraints"]["balanced_weekends"]
+            except KeyError:
+                balanced_weekends_constraint = False
+            if balanced_weekends_constraint and _get_weekday(today) in ["Sa", "So"]:
+                future_weekends_summands = [7, 8, 14, 15, 21, 22] if _get_weekday(today) == "Sa" \
+                    else [6, 7, 13, 14, 20, 21]  # If somebody works on a Saturday or Sunday,
+                # ... working on the coming weekends is discouraged
+                future_weekends = [current_day_id + days for days in future_weekends_summands if
+                                   current_day_id + days < input_data[
+                                       "period"]]  # add the according IDs to list if period is not exceeded
+                connect_nodes = [f"{future_day}.{s}.{p}"
+                                 for s in range(input_data['shifts'])
+                                 for p in range(input_data["staff_per_shift"])
+                                 for future_day in future_weekends]  # List of all nodes associated with these weekends
+                graph2 = nx.Graph()
+                graph2.add_edges_from([(f"{current_day_id}.{s}.{p}", v)
+                                       for s in range(input_data['shifts'])
+                                       for p in range(input_data["staff_per_shift"])
+                                       for v in connect_nodes], weight=0.5)  # Add an edge of every node of today to
+                # ... the future weekend nodes
+                graph = nx.compose_all([graph2, graph])
         else:
             graph2 = nx.complete_graph(nodes)
+            nx.set_edge_attributes(graph2, 1, "weight")
             graph = nx.compose_all([graph2, graph])
-        total_days += 1
-    nx.set_edge_attributes(graph, 1, "weight")
+        current_day_id += 1
     return graph, input_data
 
 
@@ -145,7 +172,7 @@ def interpret_graph(graph: nx.graph, coloring, input_data):
             s = int(s) + 1
             p = int(p) + 1
             assigned_staff = coloring.get(node)
-            date = input_data["start_day"] + datetime.timedelta(days=d)
+            date = input_data["start_date"] + datetime.timedelta(days=d)
             csv_writer.writerow([_get_weekday(date), date.strftime("%Y-%m-%d"), s, p, assigned_staff])
 
 

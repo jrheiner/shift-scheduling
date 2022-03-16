@@ -15,10 +15,15 @@
         "Tu",
         "We",
         "Th",
-        "Fr"
+        "Fr",
+        "Sa",
+        "So"
       ],
-      "start_day": "2022-02-18",
-      "start_end": "2022-02-25"
+      "start_date": "2022-02-18",
+      "end_date": "2022-02-25",
+      "soft_constraints": {
+        "balanced_weekends": true
+      }
     }
   ],
   "required": [
@@ -26,8 +31,8 @@
     "staff_per_shift",
     "total_staff",
     "days_of_week",
-    "start_day",
-    "start_end"
+    "start_date",
+    "end_date"
   ],
   "properties": {
     "shifts": {
@@ -89,28 +94,54 @@
         "default": ""
       }
     },
-    "start_day": {
-      "$id": "#/properties/start_day",
+    "start_date": {
+      "$id": "#/properties/start_date",
       "type": "string",
       "format": "date",
-      "title": "The start_day schema",
-      "description": "The start day of the timetable.",
+      "title": "The start_date schema",
+      "description": "The start date of the timetable.",
       "default": "",
       "examples": [
         "2022-02-18"
       ]
     },
-    "period": {
-      "$id": "#/properties/start_end",
+    "end_date": {
+      "$id": "#/properties/end_date",
       "type": "string",
       "format": "date",
-      "title": "The period schema",
-      "description": "The end day of the timetable.",
+      "title": "The end_date schema",
+      "description": "The end date of the timetable.",
       "default": "",
       "examples": [
         "2022-02-25"
       ]
+    },
+    "soft_constraints": {
+      "$id": "#/properties/soft_constraints",
+      "type": "object",
+      "title": "The soft_constraints schema",
+      "description": "Soft constraint configurations",
+      "default": {},
+      "examples": [
+        {
+          "balanced_weekends": true
+        }
+      ],
+      "required": [],
+      "properties": {
+        "balanced_weekends": {
+          "$id": "#/properties/soft_constraints/properties/balanced_weekends",
+          "type": "boolean",
+          "title": "The balanced_weekends schema",
+          "description": "If set to true, soft constraints will be added such that workers working on a given weekend don't have to work on other weekends in this month.",
+          "default": false,
+          "examples": [
+            true
+          ]
+        }
+      },
+      "additionalProperties": false
     }
   },
-  "additionalProperties": true
+  "additionalProperties": false
 }
