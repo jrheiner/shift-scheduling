@@ -13,13 +13,13 @@ import numpy as np
 from jsonschema import validate
 
 
-def _parse_input(input_path: str) -> dict:
+def _parse_input(config_path: str) -> dict:
     """
-    Parses and validates input file
-    :param input_path: Path to the input file
+    Parses and validates the configuration file
+    :param config_path: Path to the input file
     :return: input data as dict
     """
-    with open(input_path, "r") as input_file, open("schema/input_schema.json") as schema_file:
+    with open(config_path, "r") as input_file, open("schema/input_schema.json") as schema_file:
         schema = json.load(schema_file)
         input_data = json.load(input_file)
         validate(instance=input_data, schema=schema)
@@ -54,6 +54,7 @@ def _alpha_cut(graph: nx.Graph, alpha: float) -> nx.Graph:
 def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, cm=None):
     """
     Plots a given NetworkX graph and labels edges according to their assigned weight.
+    Note: Colormap only supports 10 different colors.
 
     :param graph: NetworkX graph
     :return: None
@@ -65,14 +66,27 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, cm=None):
             labels={node: node for node in graph.nodes()},
             node_size=1e3,
             node_color=cm,
-            cmap=plt.cm.tab10)  # TODO Does just work until 10
+            cmap=plt.cm.tab10)
     # nx.draw_networkx_edge_labels(graph, pos, edge_labels=nx.get_edge_attributes(graph, "weight"))
     plt.show()
 
 
-def create_schedule(input_path: str):
-    graph, input_data = generate_graph(input_path)
-    _draw_weighted_graph(graph, input_data["shifts"])
+def create_schedule(config_path: str, show_graph: bool = False, print_stats: bool = False):
+    """
+    Create a work schedule based on the supplied configuration file.
+    Writes schedule in output file 'schedule.csv' to disk.
+
+    :param config_path: Path to the configuration file
+    :param show_graph: Flag whether the generated and colored graphs should be shown. Recommended only for small graphs.
+    :param print_stats: Flag whether number of nodes, edges, and coloring scores should be printed to the console
+    :return:
+    """
+    graph, input_data = generate_graph(config_path)
+    if print_stats:
+        print(f"Graph has {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges.")
+
+    if show_graph:
+        _draw_weighted_graph(graph, input_data["shifts"])
 
     if graph.number_of_nodes() < input_data["total_staff"]:
         raise Exception("There are more members in your team than available shifts")
@@ -82,15 +96,24 @@ def create_schedule(input_path: str):
     except fgc.NoSolutionException:
         raise Exception("Even by considering only hard constraints, a schedule is not possible. "
                         f"(A {input_data['total_staff']}-coloring does not exist.)")
+    if show_graph:
+        _draw_weighted_graph(graph, input_data["shifts"], cm=[fuzzy_coloring.get(node) for node in graph])
 
-    _draw_weighted_graph(graph, input_data["shifts"], cm=[fuzzy_coloring.get(node) for node in graph])
-    print(score, fuzzy_coloring)
-    print(_calculate_fairness(fuzzy_coloring))
+    if print_stats:
+        print(score, fuzzy_coloring)
+        print(_calculate_fairness(fuzzy_coloring))
     interpret_graph(graph, fuzzy_coloring, input_data)
 
 
-def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
-    input_data = _parse_input(input_path)
+def generate_graph(config_path: str) -> Tuple[nx.Graph, dict]:
+    """
+    Builds a graph represented the unassigned shift schedule.
+    Graph nodes are named following the convention: [D].[S].[P] e.g., 0.0.1 => 1st day, 1st shift, 2nd pos
+
+    :param config_path: Path to the configuration file
+    :return: Tuple(Graph, config_data)
+    """
+    input_data = _parse_input(config_path)
     current_day_id = 0
     while current_day_id < input_data["period"]:
         today = input_data["start_date"] + datetime.timedelta(days=current_day_id)
@@ -148,7 +171,15 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
     return graph, input_data
 
 
-def fuzzy_color(graph: nx.Graph, k):
+def fuzzy_color(graph: nx.Graph, k: int):
+    """
+    Calls the fuzzy graph k-coloring algorithm.
+    Tries to assign colors equitably. If no "fair" solutions is found a fallback algorithm is used.
+
+    :param graph: NetworkX fuzzy graph
+    :param k: k for a k-coloring
+    :return: Tuple(coloring, score, Optional[alpha])
+    """
     # t = timeit.Timer(functools.partial(fgc.alpha_fuzzy_color, graph, k, fair=True))
     # r = t.repeat(100, 1)
     # print(r)
@@ -161,12 +192,22 @@ def fuzzy_color(graph: nx.Graph, k):
 
 
 def interpret_graph(graph: nx.graph, coloring, input_data):
+    """
+    Interprets a colored graph as staff-shift-assignment and writes the final schedule as 'schedule.csv' file.
+    The CSV files has the rows: Day, Date, Shift, Position
+    Example line: We, 2022-02-02,1,1,6
+
+    :param graph: Input graph
+    :param coloring: Graph color assignment
+    :param input_data: Configuration data
+    :return:
+    """
     with open('schedule.csv', 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',',
                                 quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(['Day', 'Date', 'Shift', 'Position', 'Staff'])
         # Day, Shift, Position, Staff
-        for node in sorted(graph):
+        for node in sorted(graph, key=_sort_key_nodes_factory(input_data)):
             d, s, p = node.split(".")
             d = int(d)
             s = int(s) + 1
@@ -176,7 +217,28 @@ def interpret_graph(graph: nx.graph, coloring, input_data):
             csv_writer.writerow([_get_weekday(date), date.strftime("%Y-%m-%d"), s, p, assigned_staff])
 
 
+def _sort_key_nodes_factory(input_data):
+    """
+    Factory to loosely couple the input_data dictionary to the function that sorts nodes by their names
+    :param input_data:
+    :return:
+    """
+    def _sort_key_nodes(name: str):
+        d, s, p = name.split('.')
+        d, s, p = int(d), int(s), int(p)
+        return (input_data['shifts'] + input_data["staff_per_shift"] + 2) * d \
+            + (input_data["staff_per_shift"] + 1) * s \
+            + p
+
+    return _sort_key_nodes
+
+
 def _get_weekday(date: datetime):
+    """
+    Returns the week day string abbreviation for a given datetime object
+    :param date: Datetime object
+    :return: week day string abbreviation
+    """
     weekday = {
         0: "Mo",
         1: "Tu",
@@ -192,7 +254,7 @@ def _get_weekday(date: datetime):
 def _calculate_fairness(coloring: dict):
     """
     Gives a score for the fairness of a coloring
-    :param coloring:
+    :param coloring: Color assignment
     :return: Negative standard deviation of assigned shifts per staff member
     """
     print(list(Counter(coloring.values()).values()))
@@ -200,4 +262,4 @@ def _calculate_fairness(coloring: dict):
 
 
 if __name__ == '__main__':
-    create_schedule("test_input.json")
+    create_schedule("test_input.json", show_graph=True, print_stats=True)
