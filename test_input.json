@@ -12,8 +12,8 @@
     "So"
   ],
   "start_date": "2022-02-2",
-  "end_date": "2022-02-24",
+  "end_date": "2022-03-24",
   "soft_constraints": {
-    "balanced_weekends": true
+    "balanced_weekends": false
   }
 }

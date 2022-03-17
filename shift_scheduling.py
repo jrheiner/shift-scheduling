@@ -13,25 +13,25 @@ import numpy as np
 from jsonschema import validate
 
 
-def _parse_input(config_path: str) -> dict:
+def _parse_input(input_path: str) -> dict:
     """
-    Parses and validates the configuration file
-    :param config_path: Path to the input file
+    Parses and validates the input file
+    :param input_path: Path to the input file
     :return: input data as dict
     """
-    with open(config_path, "r") as input_file, open("schema/input_schema.json") as schema_file:
+    with open(input_path, "r") as input_file, open("schema/input_schema.json") as schema_file:
         schema = json.load(schema_file)
         input_data = json.load(input_file)
         validate(instance=input_data, schema=schema)
     assert input_data["shifts"] * input_data["staff_per_shift"] <= input_data["total_staff"], \
-        f"Invalid configuration. With only {input_data['total_staff']} staff members a schedule with " \
+        f"Invalid input. With only {input_data['total_staff']} staff members a schedule with " \
         f"{input_data['shifts']} shifts and {input_data['staff_per_shift']} staff members per shift is not possible."
 
     input_data["start_date"] = datetime.datetime.strptime(input_data["start_date"], "%Y-%m-%d")
     input_data["end_date"] = datetime.datetime.strptime(input_data["end_date"], "%Y-%m-%d")
     input_data["period"] = (input_data["end_date"] - input_data["start_date"]).days + 1
     assert input_data["period"] > 0, \
-        f"Invalid configuration. Start date ({input_data['start_date'].strftime('%Y-%m-%d')}) is after " \
+        f"Invalid input. Start date ({input_data['start_date'].strftime('%Y-%m-%d')}) is after " \
         f"end date ({input_data['end_date'].strftime('%Y-%m-%d')})."
     return input_data
 
@@ -71,17 +71,17 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, cm=None):
     plt.show()
 
 
-def create_schedule(config_path: str, show_graph: bool = False, print_stats: bool = False):
+def create_schedule(input_path: str, show_graph: bool = False, print_stats: bool = False):
     """
-    Create a work schedule based on the supplied configuration file.
+    Create a work schedule based on the supplied input file.
     Writes schedule in output file 'schedule.csv' to disk.
 
-    :param config_path: Path to the configuration file
+    :param input_path: Path to the input file
     :param show_graph: Flag whether the generated and colored graphs should be shown. Recommended only for small graphs.
     :param print_stats: Flag whether number of nodes, edges, and coloring scores should be printed to the console
     :return:
     """
-    graph, input_data = generate_graph(config_path)
+    graph, input_data = generate_graph(input_path)
     if print_stats:
         print(f"Graph has {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges.")
 
@@ -105,15 +105,15 @@ def create_schedule(config_path: str, show_graph: bool = False, print_stats: boo
     interpret_graph(graph, fuzzy_coloring, input_data)
 
 
-def generate_graph(config_path: str) -> Tuple[nx.Graph, dict]:
+def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
     """
     Builds a graph represented the unassigned shift schedule.
     Graph nodes are named following the convention: [D].[S].[P] e.g., 0.0.1 => 1st day, 1st shift, 2nd pos
 
-    :param config_path: Path to the configuration file
-    :return: Tuple(Graph, config_data)
+    :param input_path: Path to the input file
+    :return: Tuple(Graph, input_data)
     """
-    input_data = _parse_input(config_path)
+    input_data = _parse_input(input_path)
     current_day_id = 0
     while current_day_id < input_data["period"]:
         today = input_data["start_date"] + datetime.timedelta(days=current_day_id)
@@ -199,7 +199,7 @@ def interpret_graph(graph: nx.graph, coloring, input_data):
 
     :param graph: Input graph
     :param coloring: Graph color assignment
-    :param input_data: Configuration data
+    :param input_data: Input data
     :return:
     """
     with open('schedule.csv', 'w', newline='') as csvfile:
@@ -219,11 +219,17 @@ def interpret_graph(graph: nx.graph, coloring, input_data):
 
 def _sort_key_nodes_factory(input_data):
     """
-    Factory to loosely couple the input_data dictionary to the function that sorts nodes by their names
-    :param input_data:
-    :return:
+    Factory to loosely couple the input_data dictionary to the function that sorts nodes by their names.
+    :param input_data: the input data dictionary
+    :return: Sort key function for sorting nodes by their names.
     """
+
     def _sort_key_nodes(name: str):
+        """
+        Sort key for nodes by names with {d}.{s}.{p}
+        :param name: node name
+        :return: scalar value representing order
+        """
         d, s, p = name.split('.')
         d, s, p = int(d), int(s), int(p)
         return (input_data['shifts'] + input_data["staff_per_shift"] + 2) * d \
@@ -255,10 +261,11 @@ def _calculate_fairness(coloring: dict):
     """
     Gives a score for the fairness of a coloring
     :param coloring: Color assignment
-    :return: Negative standard deviation of assigned shifts per staff member
+    :return: Negative coefficient of variation (as percentage) of assigned shifts per staff member
     """
-    print(list(Counter(coloring.values()).values()))
-    return - np.std(list(Counter(coloring.values()).values()))
+    shift_dist = list(Counter(coloring.values()).values())
+    print(shift_dist)
+    return np.std(shift_dist) / np.mean(shift_dist) * - 100
 
 
 if __name__ == '__main__':
