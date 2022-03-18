@@ -2,6 +2,7 @@ import csv
 import datetime
 # import functools
 import json
+import pathlib
 import warnings
 from collections import Counter
 # import timeit
@@ -12,6 +13,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from jsonschema import validate
+import argparse
 
 
 def _parse_input(input_path: str) -> dict:
@@ -79,15 +81,17 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, node_colors=None, draw
 
 
 def create_schedule(input_path: str, show_graph: bool = False, verbose: bool = False,
-                    print_color_assignment: bool = False):
+                    print_color_assignment: bool = False, output_file: str = "schedule.csv"):
     """
     Create a work schedule based on the supplied input file.
     Writes schedule in output file 'schedule.csv' to disk.
+
 
     :param input_path: Path to the input file
     :param show_graph: Flag whether the generated and colored graphs should be shown. Recommended only for small graphs.
     :param verbose: Flag whether number of nodes, edges, coloring scores, and final alpha should be printed
     :param print_color_assignment: Flag whether the complete color assignment dictionary should be printed
+    :param output_file: Output file path
     :return:
     """
     graph, input_data = generate_graph(input_path)
@@ -115,7 +119,7 @@ def create_schedule(input_path: str, show_graph: bool = False, verbose: bool = F
         print(f"Alpha-cut using alpha={alpha}")
         print(f"Graph coloring has score of {score}")
         print(f"Solution has a fairness score of {_calculate_fairness(fuzzy_coloring, print_distribution=verbose)}")
-    interpret_graph(graph, fuzzy_coloring, input_data)
+    interpret_graph(graph, fuzzy_coloring, input_data, output_file)
 
 
 def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
@@ -213,7 +217,7 @@ def fuzzy_color(graph: nx.Graph, k: int, verbose: bool = False):
         return fgc.alpha_fuzzy_color(graph, k, return_alpha=True)
 
 
-def interpret_graph(graph: nx.graph, coloring, input_data):
+def interpret_graph(graph: nx.graph, coloring, input_data, output_file: str):
     """
     Interprets a colored graph as staff-shift-assignment and writes the final schedule as 'schedule.csv' file.
     The CSV files has the rows: Day, Date, Shift, Position
@@ -222,9 +226,10 @@ def interpret_graph(graph: nx.graph, coloring, input_data):
     :param graph: Input graph
     :param coloring: Graph color assignment
     :param input_data: Input data
+    :param output_file: Output file path
     :return:
     """
-    with open('schedule.csv', 'w', newline='') as csvfile:
+    with open(output_file, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',',
                                 quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(['Day', 'Date', 'Shift', 'Position', 'Staff'])
@@ -237,6 +242,7 @@ def interpret_graph(graph: nx.graph, coloring, input_data):
             assigned_staff = coloring.get(node)
             date = input_data["start_date"] + datetime.timedelta(days=d)
             csv_writer.writerow([_get_weekday(date), date.strftime("%Y-%m-%d"), s, p, assigned_staff])
+    print(f"Wrote staff timetable to '{output_file}'.")
 
 
 def _sort_key_nodes_factory(input_data):
@@ -293,4 +299,19 @@ def _calculate_fairness(coloring: dict, print_distribution: bool = False):
 
 
 if __name__ == '__main__':
-    create_schedule("test_input.json", show_graph=True, verbose=True, print_color_assignment=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input_file', type=argparse.FileType('r'), nargs='?', help='Shift scheduling input file',
+                        default="test_input.json")
+    parser.add_argument('-o', '--output-file', type=pathlib.Path, nargs='?', help='Shift scheduling output csv file',
+                        default="schedule.csv")
+    parser.add_argument('-sg', '--show-graph', action='store_true', help='Whether the graph should be shown')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Prints additional graph and solution information')
+    parser.add_argument('-pca', '--print-color-assignment', action='store_true',
+                        help='Prints additional graph and solution information')
+    args = parser.parse_args()
+
+    if args.output_file is None:
+        args.output_file = "schedule.csv"
+
+    create_schedule(args.input_file.name, show_graph=args.show_graph, verbose=args.verbose,
+                    print_color_assignment=args.print_color_assignment, output_file=args.output_file)

@@ -10,10 +10,8 @@ Welcome to shift-scheduling's documentation!
    :maxdepth: 2
    :caption: Table of Contents
 
-shift-scheduling is a Python package for calculating
-the fuzzy chromatic number and coloring of a graph with fuzzy edges.
-It will create a coloring with a minimal amount of incompatible edges
-using a genetic algorithm.
+shift-scheduling is a Python package for creating shift schedules using graph coloring.
+
 
 See repository https://github.com/jrheiner/shift-scheduling
 
@@ -33,17 +31,7 @@ Try simple code:
 
 .. code-block::
 
-   import fuzzy-graph-coloring as fgc
-
-   TG1 = nx.Graph()
-   TG1.add_edge(1, 2, weight=0.7)
-   TG1.add_edge(1, 3, weight=0.8)
-   TG1.add_edge(1, 4, weight=0.5)
-   TG1.add_edge(2, 3, weight=0.3)
-   TG1.add_edge(2, 4, weight=0.4)
-   TG1.add_edge(3, 4, weight=1.0)
-
-   fgc.fuzzy_color(TG1, 3)
+   python shift_scheduling.py test_input.json
 
 Result: `({1: 2, 2: 3, 3: 3, 4: 1}, 0.918918918918919)`
 
