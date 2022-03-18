@@ -51,12 +51,15 @@ def _alpha_cut(graph: nx.Graph, alpha: float) -> nx.Graph:
     return g
 
 
-def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, cm=None):
+def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, node_colors=None, draw_weights: bool = False):
     """
-    Plots a given NetworkX graph and labels edges according to their assigned weight.
+    Plots a given NetworkX graph. Optionally colors nodes and labels edges according to their assigned weight.
     Note: Colormap only supports 10 different colors.
 
     :param graph: NetworkX graph
+    :param shifts_per_day: Number of shifts each day
+    :param node_colors: Array of node colors (as integers), actual colors are given by the colormap
+    :param draw_weights: Whether edges should be labeled with their assigned weight
     :return: None
     """
     pos = {s: (shifts_per_day * int(s.split(".")[0]) * 1.3 + int(s.split(".")[1]) + 0.3 * (int(s.split(".")[2]) % 2),
@@ -65,24 +68,27 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, cm=None):
     nx.draw(graph, pos,
             labels={node: node for node in graph.nodes()},
             node_size=1e3,
-            node_color=cm,
+            node_color=node_colors,
             cmap=plt.cm.tab10)
-    # nx.draw_networkx_edge_labels(graph, pos, edge_labels=nx.get_edge_attributes(graph, "weight"))
+    if draw_weights:
+        nx.draw_networkx_edge_labels(graph, pos, edge_labels=nx.get_edge_attributes(graph, "weight"))
     plt.show()
 
 
-def create_schedule(input_path: str, show_graph: bool = False, print_stats: bool = False):
+def create_schedule(input_path: str, show_graph: bool = False, verbose: bool = False,
+                    print_color_assignment: bool = False):
     """
     Create a work schedule based on the supplied input file.
     Writes schedule in output file 'schedule.csv' to disk.
 
     :param input_path: Path to the input file
     :param show_graph: Flag whether the generated and colored graphs should be shown. Recommended only for small graphs.
-    :param print_stats: Flag whether number of nodes, edges, and coloring scores should be printed to the console
+    :param verbose: Flag whether number of nodes, edges, coloring scores, and final alpha should be printed
+    :param print_color_assignment: Flag whether the complete color assignment dictionary should be printed
     :return:
     """
     graph, input_data = generate_graph(input_path)
-    if print_stats:
+    if verbose:
         print(f"Graph has {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges.")
 
     if show_graph:
@@ -92,16 +98,20 @@ def create_schedule(input_path: str, show_graph: bool = False, print_stats: bool
         raise Exception("There are more members in your team than available shifts")
 
     try:
-        fuzzy_coloring, score = fuzzy_color(graph, input_data["total_staff"])
+        fuzzy_coloring, score, alpha = fuzzy_color(graph, input_data["total_staff"], verbose=verbose)
     except fgc.NoSolutionException:
         raise Exception("Even by considering only hard constraints, a schedule is not possible. "
                         f"(A {input_data['total_staff']}-coloring does not exist.)")
     if show_graph:
-        _draw_weighted_graph(graph, input_data["shifts"], cm=[fuzzy_coloring.get(node) for node in graph])
+        _draw_weighted_graph(graph, input_data["shifts"], node_colors=[fuzzy_coloring.get(node) for node in graph])
 
-    if print_stats:
-        print(score, fuzzy_coloring)
-        print(_calculate_fairness(fuzzy_coloring))
+    if print_color_assignment:
+        print("Color assignment: ", fuzzy_coloring)
+
+    if verbose:
+        print(f"Alpha-cut using alpha={alpha}")
+        print(f"Graph coloring has score of {score}")
+        print(f"Solution has a fairness score of {_calculate_fairness(fuzzy_coloring, print_distribution=verbose)}")
     interpret_graph(graph, fuzzy_coloring, input_data)
 
 
@@ -178,13 +188,14 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
     return graph, input_data
 
 
-def fuzzy_color(graph: nx.Graph, k: int):
+def fuzzy_color(graph: nx.Graph, k: int, verbose: bool = False):
     """
     Calls the fuzzy graph k-coloring algorithm.
     Tries to assign colors equitably. If no "fair" solutions is found a fallback algorithm is used.
 
     :param graph: NetworkX fuzzy graph
     :param k: k for a k-coloring
+    :param verbose: Print information on which coloring method is used
     :return: Tuple(coloring, score, Optional[alpha])
     """
     # t = timeit.Timer(functools.partial(fgc.alpha_fuzzy_color, graph, k, fair=True))
@@ -192,10 +203,11 @@ def fuzzy_color(graph: nx.Graph, k: int):
     # print(r)
     # print(np.mean(r), np.std(r))
     try:
-        return fgc.alpha_fuzzy_color(graph, k, fair=True)
+        return fgc.alpha_fuzzy_color(graph, k, fair=True, return_alpha=True)
     except fgc.NoSolutionException:
-        print("Unfair")
-        return fgc.alpha_fuzzy_color(graph, k)
+        if verbose:
+            print("Failed to use a fair order of colors, i.e., team members. Try to use best-fit.")
+        return fgc.alpha_fuzzy_color(graph, k, return_alpha=True)
 
 
 def interpret_graph(graph: nx.graph, coloring, input_data):
@@ -264,16 +276,18 @@ def _get_weekday(date: datetime):
     return weekday.get(date.weekday())
 
 
-def _calculate_fairness(coloring: dict):
+def _calculate_fairness(coloring: dict, print_distribution: bool = False):
     """
     Gives a score for the fairness of a coloring
     :param coloring: Color assignment
+    :param print_distribution: Whether the shift distribution should be printed
     :return: Negative coefficient of variation (as percentage) of assigned shifts per staff member
     """
     shift_dist = list(Counter(coloring.values()).values())
-    print(shift_dist)
+    if print_distribution:
+        print(f"Shift distribution: {shift_dist}")
     return np.std(shift_dist) / np.mean(shift_dist) * - 100
 
 
 if __name__ == '__main__':
-    create_schedule("test_input.json", show_graph=True, print_stats=True)
+    create_schedule("test_input.json", show_graph=True, verbose=True, print_color_assignment=True)
