@@ -2,6 +2,7 @@ import csv
 import datetime
 # import functools
 import json
+import warnings
 from collections import Counter
 # import timeit
 from typing import Tuple
@@ -62,6 +63,8 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, node_colors=None, draw
     :param draw_weights: Whether edges should be labeled with their assigned weight
     :return: None
     """
+    if node_colors and len(set(node_colors)) > 10:
+        warnings.warn(f"Colormap only supports 10 different colors. Coloring has {len(set(node_colors))} colors.")
     pos = {s: (shifts_per_day * int(s.split(".")[0]) * 1.3 + int(s.split(".")[1]) + 0.3 * (int(s.split(".")[2]) % 2),
                int(s.split(".")[2]))
            for s in graph.nodes()}
