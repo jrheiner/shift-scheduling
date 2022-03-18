@@ -23,28 +23,41 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-Quick-Start
-===========
-Install package: `pip install fuzzy-graph-coloring`
+Usage
+=====
+1. Get Python 3.8+
+2. Create virtual environment: :code:`python -m venv .venv`
+3. Activate virtual environment: :code:`.\.venv\Scripts\activate`
+4. Install dependencies: :code:`pip install jsonschema networkx numpy fuzzy-graph-coloring`
 
-Try simple code:
+Use as CLI-Application: :code:`python .\shift_scheduling.py -v default_input.json`
+
+Help:
 
 .. code-block::
 
-   python shift_scheduling.py test_input.json
+   usage: shift_scheduling.py [-h] [-o [OUTPUT_FILE]] [-s] [-v] [-p] [input_file]
 
-Result: `({1: 2, 2: 3, 3: 3, 4: 1}, 0.918918918918919)`
+   positional arguments:
+     input_file            Shift scheduling input file. Defaults to "default_input.json"
+
+   optional arguments:
+     -h, --help            show this help message and exit
+     -o [OUTPUT_FILE], --output-file [OUTPUT_FILE]
+                           Shift scheduling output csv file. Defaults to "schedule.csv"
+     -s, --show-graph      Whether the graph should be shown
+     -v, --verbose         Prints additional graph and solution information
+     -p, --print-color-assignment
+                           Prints additional graph and solution information
+
+
+
 
 Public functions
 ================
 .. automodule:: shift_scheduling
    :members:
 
-Bibliography
-============
-The project uses a lot of the by Keshavarz created basics:
-E. Keshavarz, “Vertex-coloring of fuzzy graphs: A new approach,” Journal of Intelligent & Fuzzy Systems, vol. 30, pp. 883–893, 2016, issn: 1875-8967. https://doi.org/10.3233/IFS-151810
-
 License
 =======
-This project is licensed under GNU General Public License v3.0 (GNU GPLv3). See `LICENSE` in the code repository.
+This project is licensed under GNU General Public License v3.0 (GNU GPLv3). See :code:`LICENSE` in the code repository.

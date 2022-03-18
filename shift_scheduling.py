@@ -1,3 +1,4 @@
+import argparse
 import csv
 import datetime
 # import functools
@@ -13,7 +14,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from jsonschema import validate
-import argparse
 
 
 def _parse_input(input_path: str) -> dict:
@@ -217,9 +217,9 @@ def fuzzy_color(graph: nx.Graph, k: int, verbose: bool = False):
         return fgc.alpha_fuzzy_color(graph, k, return_alpha=True)
 
 
-def interpret_graph(graph: nx.graph, coloring, input_data, output_file: str):
+def interpret_graph(graph: nx.Graph, coloring, input_data, output_file: str):
     """
-    Interprets a colored graph as staff-shift-assignment and writes the final schedule as 'schedule.csv' file.
+    Interprets a colored graph as staff-shift-assignment and writes the final schedule csv file.
     The CSV files has the rows: Day, Date, Shift, Position
     Example line: We, 2022-02-02,1,1,6
 
@@ -227,7 +227,7 @@ def interpret_graph(graph: nx.graph, coloring, input_data, output_file: str):
     :param coloring: Graph color assignment
     :param input_data: Input data
     :param output_file: Output file path
-    :return:
+    :return: Nothing
     """
     with open(output_file, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',',
@@ -300,13 +300,15 @@ def _calculate_fairness(coloring: dict, print_distribution: bool = False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_file', type=argparse.FileType('r'), nargs='?', help='Shift scheduling input file',
-                        default="test_input.json")
-    parser.add_argument('-o', '--output-file', type=pathlib.Path, nargs='?', help='Shift scheduling output csv file',
+    parser.add_argument('input_file', type=argparse.FileType('r'), nargs='?',
+                        help='Shift scheduling input file. Defaults to "default_input.json"',
+                        default="default_input.json")
+    parser.add_argument('-o', '--output-file', type=pathlib.Path, nargs='?',
+                        help='Shift scheduling output csv file. Defaults to "schedule.csv"',
                         default="schedule.csv")
-    parser.add_argument('-sg', '--show-graph', action='store_true', help='Whether the graph should be shown')
+    parser.add_argument('-s', '--show-graph', action='store_true', help='Whether the graph should be shown')
     parser.add_argument('-v', '--verbose', action='store_true', help='Prints additional graph and solution information')
-    parser.add_argument('-pca', '--print-color-assignment', action='store_true',
+    parser.add_argument('-p', '--print-color-assignment', action='store_true',
                         help='Prints additional graph and solution information')
     args = parser.parse_args()
 
