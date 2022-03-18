@@ -11,7 +11,7 @@ python = "^3.8"
 jsonschema = "^4.4.0"
 networkx = "^2.6.3"
 numpy = "^1.22.2"
-fuzzy-graph-coloring = {path = "fgc/fuzzy_graph_coloring-0.1.0-py3-none-any.whl"}
+fuzzy-graph-coloring = "^0.1.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
