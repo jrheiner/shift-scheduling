@@ -140,32 +140,39 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
             nx.set_edge_attributes(graph2, 1, "weight")
             graph = nx.compose_all([graph2, graph, connect_days])
 
-            # add soft constraint "balanced_weekends"
-            try:
-                balanced_weekends_constraint = input_data["soft_constraints"]["balanced_weekends"]
-            except KeyError:
-                balanced_weekends_constraint = False
-            if balanced_weekends_constraint and _get_weekday(today) in ["Sa", "So"]:
-                future_weekends_summands = [7, 8, 14, 15, 21, 22] if _get_weekday(today) == "Sa" \
-                    else [6, 7, 13, 14, 20, 21]  # If somebody works on a Saturday or Sunday,
-                # ... working on the coming weekends is discouraged
-                future_weekends = [current_day_id + days for days in future_weekends_summands if
-                                   current_day_id + days < input_data[
-                                       "period"]]  # add the according IDs to list if period is not exceeded
-                connect_nodes = [f"{future_day}.{s}.{p}"
-                                 for s in range(input_data['shifts'])
-                                 for p in range(input_data["staff_per_shift"])
-                                 for future_day in future_weekends]  # List of all nodes associated with these weekends
-                graph2 = nx.Graph()
-                graph2.add_edges_from([(f"{current_day_id}.{s}.{p}", v)
-                                       for s in range(input_data['shifts'])
-                                       for p in range(input_data["staff_per_shift"])
-                                       for v in connect_nodes], weight=0.5)  # Add an edge of every node of today to
-                # ... the future weekend nodes
-                graph = nx.compose_all([graph2, graph])
         else:
             graph2 = nx.complete_graph(nodes)
             nx.set_edge_attributes(graph2, 1, "weight")
+            graph = nx.compose_all([graph2, graph])
+
+        # add soft constraint "balanced_weekends"
+        try:
+            balanced_weekends_constraint = input_data["soft_constraints"]["balanced_weekends"]
+        except KeyError:
+            balanced_weekends_constraint = False
+        if balanced_weekends_constraint and _get_weekday(today) in ["Sa", "So"]:
+            future_weekends_summands = [(7, 0.75), (14, 0.5), (21, 0.25)]
+            if _get_weekday(today) == "Sa" and "Su" in input_data["days_of_week"]:
+                future_weekends_summands.extend([(8, 0.75), (15, 0.5), (22, 0.25)])
+            elif _get_weekday(today) == "Su" and "Sa" in input_data["days_of_week"]:
+                future_weekends_summands.extend([(6, 0.75), (13, 0.5), (20, 0.25)])
+
+            # add the according IDs to list if period is not exceeded
+            future_weekends = [(current_day_id + days, weight) for (days, weight) in future_weekends_summands if
+                               current_day_id + days < input_data["period"]]
+            future_weekends, weights = zip(*future_weekends) if future_weekends else ([], [])
+            connect_nodes = [f"{future_day}.{s}.{p}"
+                             for s in range(input_data['shifts'])
+                             for p in range(input_data["staff_per_shift"])
+                             for future_day in future_weekends]  # List of all nodes associated with these weekends
+            graph2 = nx.Graph()
+            graph2.add_weighted_edges_from([(f"{current_day_id}.{s}.{p}", v, w)
+                                            for s in range(input_data['shifts'])
+                                            for p in range(input_data["staff_per_shift"])
+                                            for v in connect_nodes
+                                            for w in
+                                            weights])  # Add an edge of every node with the respective weight of today
+            # ...to the future weekend nodes
             graph = nx.compose_all([graph2, graph])
         current_day_id += 1
     return graph, input_data
