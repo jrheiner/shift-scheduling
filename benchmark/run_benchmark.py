@@ -13,7 +13,7 @@ os.environ["BENCHMARK_MODE"] = "ON"
 
 
 def benchmark_run(input_data, weeks):
-    nodes, edges = s.create_schedule(input_data, output_file="run.csv")
+    nodes, edges = s.create_schedule(input_data, output_file="benchmark_run.csv")
     r = []
     for _ in range(2):
         r.append(_single_run(input_data))
@@ -27,25 +27,40 @@ def benchmark_run(input_data, weeks):
 
 
 def _single_run(input_data):
-    t = timeit.Timer(functools.partial(s.create_schedule, input_data, output_file="run.csv"))
+    t = timeit.Timer(functools.partial(s.create_schedule, input_data, output_file="benchmark_run.csv"))
     return min(t.repeat(1, 1))
 
 
-def plot_benchmark(runs_list: list, plot_title):
+def plot_benchmark(list_of_runs: list, graph_labels: list, plot_title: str):
+    """
+    Plots benchmark runs in a single figure.
+    x values and labels are calculated based on the first run.
+
+    :param list_of_runs: List of runs
+    :param graph_labels: List of labels for each resulting graph
+    :param plot_title: Title of the figure
+    :return: None
+    """
+    assert len(list_of_runs) == len(graph_labels), "Every run requires a graph label"
+
     fig, ax = plt.subplots()
     fig.set_tight_layout(True)
-    x = np.array([run["weeks"] for run in runs_list[0]])
-    labels = [f"{run['weeks']} ({run['nodes']})" for run in runs_list[0]]
-    for runs in runs_list:
+
+    x = np.array([run["weeks"] for run in list_of_runs[0]])
+    labels = [f"{run['weeks']} ({run['nodes']})" for run in list_of_runs[0]]
+
+    for idx, runs in enumerate(list_of_runs):
         y = np.array([run["mean"] for run in runs])
         y_std = np.array([run["std"] for run in runs])
-        ax.plot(x, y, "-")
-        ax.plot(x, y, "x")
+        ax.plot(x, y, "-", label=graph_labels[idx])
+        ax.plot(x, y, "x", color=plt.gca().lines[-1].get_color())  # Add markers in the same color as line
         ax.fill_between(x, y - y_std, y + y_std, alpha=0.2)
+
     plt.suptitle(plot_title)
     plt.ylabel("Execution time in seconds")
     plt.xlabel("Shift scheduling time frame in weeks (nodes)")
     plt.xticks(x, labels, rotation=45)
+    plt.legend()
     plt.show()
 
 
@@ -88,6 +103,13 @@ if __name__ == "__main__":
     benchmark_config["soft_constraints"]["balanced_weekends"] = True
     results.append(benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13))
     print(results[1])
-    plot_benchmark(results, plot_title="Time complexity (balanced_weekends = true)")
 
-    os.remove("run.csv")
+    benchmark_config["soft_constraints"]["balanced_weekends"] = False
+    benchmark_config["shifts"] = 4
+    results.append(benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13))
+    print(results[2])
+
+    plot_benchmark(results, graph_labels=["balanced_weekends = false", "balanced_weekends = true", "shifts = 4"],
+                   plot_title="Time complexity")
+
+    os.remove("benchmark_run.csv")
