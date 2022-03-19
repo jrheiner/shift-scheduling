@@ -57,7 +57,7 @@ def _alpha_cut(graph: nx.Graph, alpha: float) -> nx.Graph:
 def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, node_colors=None, draw_weights: bool = False):
     """
     Plots a given NetworkX graph. Optionally colors nodes and labels edges according to their assigned weight.
-    Note: Colormap only supports 10 different colors.
+    Note: Colormap only supports max. 20 different colors.
 
     :param graph: NetworkX graph
     :param shifts_per_day: Number of shifts each day
@@ -65,19 +65,25 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, node_colors=None, draw
     :param draw_weights: Whether edges should be labeled with their assigned weight
     :return: None
     """
+    color_map = plt.cm.tab10
     if node_colors and len(set(node_colors)) > 10:
-        warnings.warn(f"Colormap only supports 10 different colors. Coloring has {len(set(node_colors))} colors.")
+        color_map = plt.cm.tab20
+    if node_colors and len(set(node_colors)) > 20:
+        warnings.warn(f"Colormap only supports 20 different colors. Coloring has {len(set(node_colors))} colors.")
     pos = {s: (shifts_per_day * int(s.split(".")[0]) * 1.3 + int(s.split(".")[1]) + 0.3 * (int(s.split(".")[2]) % 2),
                int(s.split(".")[2]))
            for s in graph.nodes()}
+    with_labels = graph.number_of_nodes() <= 30
     nx.draw(graph, pos,
-            labels={node: node for node in graph.nodes()},
-            node_size=1e3,
+            node_size=1e3 if with_labels else 1e2,
+            width=1 if with_labels else .5,
             node_color=node_colors,
-            cmap=plt.cm.tab10)
+            cmap=color_map,
+            with_labels=with_labels)
     if draw_weights:
         nx.draw_networkx_edge_labels(graph, pos, edge_labels=nx.get_edge_attributes(graph, "weight"))
     plt.show()
+    # plt.savefig("graph.png", dpi=300)
 
 
 def create_schedule(input_path: str, show_graph: bool = False, verbose: bool = False,

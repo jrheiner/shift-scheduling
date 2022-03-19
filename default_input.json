@@ -1,7 +1,7 @@
 {
   "shifts": 2,
   "staff_per_shift": 3,
-  "total_staff": 15,
+  "total_staff": 10,
   "days_of_week": [
     "Mo",
     "Tu",
@@ -11,8 +11,8 @@
     "Sa",
     "Su"
   ],
-  "start_date": "2022-02-2",
-  "end_date": "2022-03-25",
+  "start_date": "2022-02-7",
+  "end_date": "2022-02-27",
   "soft_constraints": {
     "balanced_weekends": true
   }
