@@ -3,6 +3,7 @@ import csv
 import datetime
 # import functools
 import json
+import os
 import pathlib
 import warnings
 from collections import Counter
@@ -22,7 +23,9 @@ def _parse_input(input_path: str) -> dict:
     :param input_path: Path to the input file
     :return: input data as dict
     """
-    with open(input_path, "r") as input_file, open("schema/input_schema.json") as schema_file:
+    root_dir = os.path.dirname(os.path.abspath(__file__))  # This is your Project Root
+    with open(input_path, "r") as input_file,\
+            open(os.path.join(root_dir, "schema", "input_schema.json")) as schema_file:
         schema = json.load(schema_file)
         input_data = json.load(input_file)
         validate(instance=input_data, schema=schema)
@@ -250,7 +253,9 @@ def interpret_graph(graph: nx.Graph, coloring, input_data, output_file: str):
             assigned_staff = coloring.get(node)
             date = input_data["start_date"] + datetime.timedelta(days=d)
             csv_writer.writerow([_get_weekday(date), date.strftime("%Y-%m-%d"), s, p, assigned_staff])
-    print(f"Wrote staff timetable to '{output_file}'.")
+
+    if not bool(os.environ.get("BENCHMARK_MODE", False)):
+        print(f"Wrote staff timetable to '{output_file}'.")
 
 
 def _sort_key_nodes_factory(input_data):
