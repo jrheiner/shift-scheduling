@@ -1,3 +1,5 @@
+import copy
+import datetime
 import functools
 
 import shift_scheduling as s
@@ -6,16 +8,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import os
-import glob
 
 os.environ["BENCHMARK_MODE"] = "ON"
 
 
-def benchmark_run(input_file):
-    weeks, nodes, edges, _ = os.path.basename(input_file).split(".")
+def benchmark_run(input_data, weeks):
+    nodes, edges = s.create_schedule(input_data, output_file="run.csv")
     r = []
     for _ in range(2):
-        r.append(_single_run(input_file))
+        r.append(_single_run(input_data))
     return {
         "mean": np.mean(r),
         "std": np.std(r),
@@ -25,35 +26,68 @@ def benchmark_run(input_file):
     }
 
 
-def _single_run(input_file):
-    t = timeit.Timer(functools.partial(s.create_schedule, input_file, output_file="run.csv"))
+def _single_run(input_data):
+    t = timeit.Timer(functools.partial(s.create_schedule, input_data, output_file="run.csv"))
     return min(t.repeat(5, 1))
 
 
-input_files = [f for f in glob.glob("./input/*.json")]
-print(f"Collected {len(input_files)} benchmark configuration{'' if len(input_files) == 1 else 's'}")
+def plot_benchmark(runs, plot_title):
+    y = np.array([run["mean"] for run in runs])
+    y_std = np.array([run["std"] for run in runs])
+    x = np.array([run["weeks"] for run in runs])
+    labels = [f"{run['weeks']} ({run['nodes']})" for run in runs]
 
-runs = []
-for idx, input_file in enumerate(input_files):
-    runs.append(benchmark_run(input_file))
-    print(f"Finished configuration {idx + 1} [{os.path.basename(input_file)}]")
+    fig, ax = plt.subplots()
+    fig.set_tight_layout(True)
+    ax.plot(x, y, "-")
+    ax.plot(x, y, "x")
+    ax.fill_between(x, y - y_std, y + y_std, alpha=0.2)
+    plt.suptitle(plot_title)
+    plt.ylabel("Execution time in seconds")
+    plt.xlabel("Shift scheduling time frame in weeks (nodes)")
+    plt.xticks(x, labels, rotation=45)
+    plt.show()
 
-print(runs)
-print(len(runs))
-os.remove("run.csv")
 
-y = np.array([run["mean"] for run in runs])
-y_std = np.array([run["std"] for run in runs])
-x = np.array([run["weeks"] for run in runs])
-labels = [f"{run['weeks']} ({run['nodes']})" for run in runs]
+def benchmark_case(benchmark_config, number_of_weeks):
+    benchmark_config = copy.deepcopy(benchmark_config)
+    runs = []
+    for idx in range(number_of_weeks):
+        weeks = 4 * (idx + 1)
+        benchmark_config["end_date"] = benchmark_config["start_date"] + datetime.timedelta(
+            weeks=weeks) - datetime.timedelta(days=1)
+        runs.append(benchmark_run(benchmark_config, weeks=weeks))
+        print(f"Finished configuration {idx + 1}/{number_of_weeks}")
+    return runs
 
-fig, ax = plt.subplots()
-fig.set_tight_layout(True)
-ax.plot(x, y, "-")
-ax.plot(x, y, "x")
-ax.fill_between(x, y - y_std, y + y_std, alpha=0.2)
-plt.suptitle("Time complexity (balanced_weekends = false)")
-plt.ylabel("Execution time in seconds")
-plt.xlabel("Shift scheduling time frame in weeks (nodes)")
-plt.xticks(x, labels, rotation=45)
-plt.show()
+
+if __name__ == "__main__":
+    benchmark_config = {
+        "shifts": 2,
+        "staff_per_shift": 3,
+        "total_staff": 15,
+        "work_days": [
+            "Mo",
+            "Tu",
+            "We",
+            "Th",
+            "Fr",
+            "Sa",
+            "Su"
+        ],
+        "start_date": datetime.datetime.strptime("2022-01-01", "%Y-%m-%d"),
+        "end_date": datetime.datetime.strptime("2022-01-01", "%Y-%m-%d"),
+        "soft_constraints": {
+            "balanced_weekends": False
+        }
+    }
+    results = benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13)
+    print(results)
+    plot_benchmark(results, plot_title="Time complexity (balanced_weekends = false)")
+
+    benchmark_config["soft_constraints"]["balanced_weekends"] = True
+    results = benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13)
+    print(results)
+    plot_benchmark(results, plot_title="Time complexity (balanced_weekends = true)")
+
+    os.remove("run.csv")

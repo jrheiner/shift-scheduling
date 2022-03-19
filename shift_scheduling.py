@@ -8,7 +8,6 @@ import pathlib
 import warnings
 from collections import Counter
 # import timeit
-from typing import Tuple
 
 import fuzzy_graph_coloring as fgc
 import matplotlib.pyplot as plt
@@ -35,10 +34,6 @@ def _parse_input(input_path: str) -> dict:
 
     input_data["start_date"] = datetime.datetime.strptime(input_data["start_date"], "%Y-%m-%d")
     input_data["end_date"] = datetime.datetime.strptime(input_data["end_date"], "%Y-%m-%d")
-    input_data["period"] = (input_data["end_date"] - input_data["start_date"]).days + 1
-    assert input_data["period"] > 0, \
-        f"Invalid input. Start date ({input_data['start_date'].strftime('%Y-%m-%d')}) is after " \
-        f"end date ({input_data['end_date'].strftime('%Y-%m-%d')})."
     return input_data
 
 
@@ -90,20 +85,24 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, node_colors=None, draw
     # plt.savefig("graph.png", dpi=300)
 
 
-def create_schedule(input_path: str, show_graph: bool = False, verbose: bool = False,
+def create_schedule(input_data: dict, show_graph: bool = False, verbose: bool = False,
                     print_color_assignment: bool = False, output_file: str = "schedule.csv"):
     """
     Create a work schedule based on the supplied input file.
     Writes schedule in output file 'schedule.csv' to disk.
 
-    :param input_path: Path to the input file
+    :param input_data: Configuration data
     :param show_graph: Flag whether the generated and colored graphs should be shown. Recommended only for small graphs.
     :param verbose: Flag whether number of nodes, edges, coloring scores, and final alpha should be printed
     :param print_color_assignment: Flag whether the complete color assignment dictionary should be printed
     :param output_file: Output file path
     :return:
     """
-    graph, input_data = generate_graph(input_path)
+    input_data["period"] = (input_data["end_date"] - input_data["start_date"]).days + 1
+    assert input_data["period"] > 0, \
+        f"Invalid input. Start date ({input_data['start_date'].strftime('%Y-%m-%d')}) is after " \
+        f"end date ({input_data['end_date'].strftime('%Y-%m-%d')})."
+    graph = generate_graph(input_data)
     if verbose:
         print(f"Graph has {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges.")
 
@@ -128,18 +127,21 @@ def create_schedule(input_path: str, show_graph: bool = False, verbose: bool = F
         print(f"Alpha-cut using alpha={alpha}")
         print(f"Graph coloring has score of {score}")
         print(f"Solution has an unfairness score of {_calculate_fairness(fuzzy_coloring, print_distribution=verbose)}")
+
     interpret_graph(graph, fuzzy_coloring, input_data, output_file)
 
+    if bool(os.environ.get("BENCHMARK_MODE", False)):
+        return graph.number_of_nodes(), graph.number_of_edges()
 
-def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
+
+def generate_graph(input_data: dict) -> nx.Graph:
     """
     Builds a graph represented the unassigned shift schedule.
     Graph nodes are named following the convention: [D].[S].[P] e.g., 0.0.1 => 1st day, 1st shift, 2nd pos
 
-    :param input_path: Path to the input file
-    :return: Tuple(Graph, input_data)
+    :param input_data: Configuration data
+    :return: graph
     """
-    input_data = _parse_input(input_path)
     current_day_id = 0
     first_working_day_processed = False
     while current_day_id < input_data["period"]:
@@ -203,7 +205,7 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
             # ...to the future weekend nodes
             graph = nx.compose_all([graph2, graph])
         current_day_id += 1
-    return graph, input_data
+    return graph
 
 
 def fuzzy_color(graph: nx.Graph, k: int, verbose: bool = False):
@@ -327,5 +329,6 @@ if __name__ == '__main__':
     if args.output_file is None:
         args.output_file = "schedule.csv"
 
-    create_schedule(args.input_file.name, show_graph=args.graph, verbose=args.verbose,
+    config_data = _parse_input(args.input_file.name)
+    create_schedule(config_data, show_graph=args.graph, verbose=args.verbose,
                     print_color_assignment=args.coloring, output_file=args.output_file)
