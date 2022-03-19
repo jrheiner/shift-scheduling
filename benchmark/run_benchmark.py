@@ -28,20 +28,20 @@ def benchmark_run(input_data, weeks):
 
 def _single_run(input_data):
     t = timeit.Timer(functools.partial(s.create_schedule, input_data, output_file="run.csv"))
-    return min(t.repeat(5, 1))
+    return min(t.repeat(1, 1))
 
 
-def plot_benchmark(runs, plot_title):
-    y = np.array([run["mean"] for run in runs])
-    y_std = np.array([run["std"] for run in runs])
-    x = np.array([run["weeks"] for run in runs])
-    labels = [f"{run['weeks']} ({run['nodes']})" for run in runs]
-
+def plot_benchmark(runs_list: list, plot_title):
     fig, ax = plt.subplots()
     fig.set_tight_layout(True)
-    ax.plot(x, y, "-")
-    ax.plot(x, y, "x")
-    ax.fill_between(x, y - y_std, y + y_std, alpha=0.2)
+    x = np.array([run["weeks"] for run in runs_list[0]])
+    labels = [f"{run['weeks']} ({run['nodes']})" for run in runs_list[0]]
+    for runs in runs_list:
+        y = np.array([run["mean"] for run in runs])
+        y_std = np.array([run["std"] for run in runs])
+        ax.plot(x, y, "-")
+        ax.plot(x, y, "x")
+        ax.fill_between(x, y - y_std, y + y_std, alpha=0.2)
     plt.suptitle(plot_title)
     plt.ylabel("Execution time in seconds")
     plt.xlabel("Shift scheduling time frame in weeks (nodes)")
@@ -81,13 +81,13 @@ if __name__ == "__main__":
             "balanced_weekends": False
         }
     }
-    results = benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13)
-    print(results)
-    plot_benchmark(results, plot_title="Time complexity (balanced_weekends = false)")
+    results = []
+    results.append(benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13))
+    print(results[0])
 
     benchmark_config["soft_constraints"]["balanced_weekends"] = True
-    results = benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13)
-    print(results)
+    results.append(benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13))
+    print(results[1])
     plot_benchmark(results, plot_title="Time complexity (balanced_weekends = true)")
 
     os.remove("run.csv")
