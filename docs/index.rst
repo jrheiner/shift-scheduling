@@ -30,9 +30,39 @@ Usage
 3. Activate virtual environment: :code:`.\.venv\Scripts\activate`
 4. Install dependencies: :code:`pip install jsonschema networkx numpy fuzzy-graph-coloring`
 
-Use as CLI-Application: :code:`python .\shift_scheduling.py -v default_input.json`
+Use as CLI-Application: :code:`python .\shift_scheduling.py -v demo_cases/introduction.json`
 
-Help:
+Output:
+
+.. code-block::
+
+   Graph has 18 nodes and 63 edges.
+   Alpha-cut using alpha=0
+   Graph coloring has score of 1.0
+   Shift distribution: [2, 2, 2, 2, 2, 2, 2, 2, 2]
+   Solution has an unfairness score of 0.0
+   Wrote staff timetable to 'schedule.csv'.
+
+
+:code:`schedule.csv`:
+
+
+.. code-block::
+
+   Day,Date,Shift,Position,Staff
+   Mo,2022-02-07,1,1,6
+   Mo,2022-02-07,1,2,7
+   Mo,2022-02-07,1,3,8
+   Mo,2022-02-07,2,1,0
+   Mo,2022-02-07,2,2,1
+   Mo,2022-02-07,2,3,2
+   Tu,2022-02-08,1,1,3
+   Tu,2022-02-08,1,2,4
+   Tu,2022-02-08,1,3,5
+   ...
+
+
+Help and parameter information
 
 .. code-block::
 

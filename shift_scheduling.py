@@ -70,6 +70,7 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, node_colors=None, draw
         color_map = plt.cm.tab20
     if node_colors and len(set(node_colors)) > 20:
         warnings.warn(f"Colormap only supports 20 different colors. Coloring has {len(set(node_colors))} colors.")
+        node_colors = [0 for _ in graph]
     pos = {s: (shifts_per_day * int(s.split(".")[0]) * 1.3 + int(s.split(".")[1]) + 0.3 * (int(s.split(".")[2]) % 2),
                int(s.split(".")[2]))
            for s in graph.nodes()}
@@ -91,7 +92,6 @@ def create_schedule(input_path: str, show_graph: bool = False, verbose: bool = F
     """
     Create a work schedule based on the supplied input file.
     Writes schedule in output file 'schedule.csv' to disk.
-
 
     :param input_path: Path to the input file
     :param show_graph: Flag whether the generated and colored graphs should be shown. Recommended only for small graphs.
@@ -124,7 +124,7 @@ def create_schedule(input_path: str, show_graph: bool = False, verbose: bool = F
     if verbose:
         print(f"Alpha-cut using alpha={alpha}")
         print(f"Graph coloring has score of {score}")
-        print(f"Solution has a fairness score of {_calculate_fairness(fuzzy_coloring, print_distribution=verbose)}")
+        print(f"Solution has an unfairness score of {_calculate_fairness(fuzzy_coloring, print_distribution=verbose)}")
     interpret_graph(graph, fuzzy_coloring, input_data, output_file)
 
 
@@ -138,21 +138,23 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
     """
     input_data = _parse_input(input_path)
     current_day_id = 0
+    first_working_day_processed = False
     while current_day_id < input_data["period"]:
         today = input_data["start_date"] + datetime.timedelta(days=current_day_id)
         yesterday = input_data["start_date"] + datetime.timedelta(days=current_day_id - 1)
-        if _get_weekday(today) not in input_data["days_of_week"]:
+        if _get_weekday(today) not in input_data["work_days"]:
             current_day_id += 1
             continue
         nodes = [f"{current_day_id}.{s}.{p}"
                  for s in range(input_data["shifts"])
                  for p in range(input_data["staff_per_shift"])]
         # [D].[S].[P] # 0.0.1 = Monika: 1st day, 1st shift, 2nd pos
-        if current_day_id == 0:
+        if not first_working_day_processed:
             graph = nx.complete_graph(nodes)
             nx.set_edge_attributes(graph, 1, "weight")
+            first_working_day_processed = True
             # Schicht: max(s)
-        elif _get_weekday(yesterday) in input_data["days_of_week"]:
+        elif _get_weekday(yesterday) in input_data["work_days"]:
             # Schicht: 0
             connect_nodes = [f"{current_day_id - 1}.{input_data['shifts'] - 1}.{p}" for p in
                              range(input_data["staff_per_shift"])]
@@ -175,9 +177,9 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
             balanced_weekends_constraint = False
         if balanced_weekends_constraint and _get_weekday(today) in ["Sa", "So"]:
             future_weekends_summands = [(7, 0.75), (14, 0.5), (21, 0.25)]
-            if _get_weekday(today) == "Sa" and "Su" in input_data["days_of_week"]:
+            if _get_weekday(today) == "Sa" and "Su" in input_data["work_days"]:
                 future_weekends_summands.extend([(8, 0.75), (15, 0.5), (22, 0.25)])
-            elif _get_weekday(today) == "Su" and "Sa" in input_data["days_of_week"]:
+            elif _get_weekday(today) == "Su" and "Sa" in input_data["work_days"]:
                 future_weekends_summands.extend([(6, 0.75), (13, 0.5), (20, 0.25)])
 
             # add the according IDs to list if period is not exceeded
@@ -296,12 +298,12 @@ def _calculate_fairness(coloring: dict, print_distribution: bool = False):
     Gives a score for the fairness of a coloring
     :param coloring: Color assignment
     :param print_distribution: Whether the shift distribution should be printed
-    :return: Negative coefficient of variation (as percentage) of assigned shifts per staff member
+    :return: Coefficient of variation (as percentage) of assigned shifts per staff member
     """
     shift_dist = list(Counter(coloring.values()).values())
     if print_distribution:
         print(f"Shift distribution: {shift_dist}")
-    return np.std(shift_dist) / np.mean(shift_dist) * - 100
+    return np.std(shift_dist) / np.mean(shift_dist) * 100
 
 
 if __name__ == '__main__':

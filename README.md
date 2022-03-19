@@ -8,33 +8,29 @@ shift-scheduling is a Python package for creating shift schedules using graph co
 3. Activate virtual environment: `.\.venv\Scripts\activate`
 4. Install dependencies: `pip install jsonschema networkx numpy fuzzy-graph-coloring`
 
-Use as CLI-Application: `python .\shift_scheduling.py -v default_input.json`
+Use as CLI-Application: `python .\shift_scheduling.py -v demo_cases/introduction.json`
 
 Output:
 ```
-Graph has 312 nodes and 2319 edges.
-Alpha-cut using alpha=0.75
-Graph coloring has score of 0.9881404174573055
-Shift distribution: [21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 20, 20, 20]
-Solution has a fairness score of -1.9230769230769231
+Graph has 18 nodes and 63 edges.
+Alpha-cut using alpha=0
+Graph coloring has score of 1.0
+Shift distribution: [2, 2, 2, 2, 2, 2, 2, 2, 2]
+Solution has an unfairness score of 0.0
 Wrote staff timetable to 'schedule.csv'.
 ```
 `schedule.csv`:
 ```
 Day,Date,Shift,Position,Staff
-We,2022-02-02,1,1,9
-We,2022-02-02,1,2,10
-We,2022-02-02,1,3,11
-We,2022-02-02,2,1,3
-We,2022-02-02,2,2,4
-We,2022-02-02,2,3,5
-Th,2022-02-03,1,1,12
-Th,2022-02-03,1,2,13
-Th,2022-02-03,1,3,14
-Th,2022-02-03,2,1,0
-Th,2022-02-03,2,2,1
-Th,2022-02-03,2,3,2
-Fr,2022-02-04,1,1,6
+Mo,2022-02-07,1,1,6
+Mo,2022-02-07,1,2,7
+Mo,2022-02-07,1,3,8
+Mo,2022-02-07,2,1,0
+Mo,2022-02-07,2,2,1
+Mo,2022-02-07,2,3,2
+Tu,2022-02-08,1,1,3
+Tu,2022-02-08,1,2,4
+Tu,2022-02-08,1,3,5
 ...
 ```
 

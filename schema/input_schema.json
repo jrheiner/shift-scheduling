@@ -10,7 +10,7 @@
       "shifts": 2,
       "staff_per_shift": 3,
       "total_staff": 15,
-      "days_of_week": [
+      "work_days": [
         "Mo",
         "Tu",
         "We",
@@ -30,7 +30,7 @@
     "shifts",
     "staff_per_shift",
     "total_staff",
-    "days_of_week",
+    "work_days",
     "start_date",
     "end_date"
   ],
@@ -65,8 +65,8 @@
         15
       ]
     },
-    "days_of_week": {
-      "$id": "#/properties/days_of_week",
+    "work_days": {
+      "$id": "#/properties/work_days",
       "type": "array",
       "title": "The days_of_week schema",
       "description": "Working days of a week.",
@@ -79,7 +79,7 @@
       ],
       "additionalItems": true,
       "items": {
-        "$id": "#/properties/days_of_week/items",
+        "$id": "#/properties/work_days/items",
         "type": "string",
         "enum": [
           "Mo",
