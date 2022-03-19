@@ -66,7 +66,7 @@ Help and parameter information
 
 .. code-block::
 
-   usage: shift_scheduling.py [-h] [-o [OUTPUT_FILE]] [-s] [-v] [-p] [input_file]
+   usage: shift_scheduling.py [-h] [-o [OUTPUT_FILE]] [-g] [-v] [-c] [input_file]
 
    positional arguments:
      input_file            Shift scheduling input file. Defaults to "default_input.json"
@@ -75,10 +75,9 @@ Help and parameter information
      -h, --help            show this help message and exit
      -o [OUTPUT_FILE], --output-file [OUTPUT_FILE]
                            Shift scheduling output csv file. Defaults to "schedule.csv"
-     -s, --show-graph      Whether the graph should be shown
+     -g, --graph           Whether the graph should be shown
      -v, --verbose         Prints additional graph and solution information
-     -p, --print-color-assignment
-                           Prints additional graph and solution information
+     -c, --coloring        Prints the complete coloring
 
 
 

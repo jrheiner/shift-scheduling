@@ -314,14 +314,13 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output-file', type=pathlib.Path, nargs='?',
                         help='Shift scheduling output csv file. Defaults to "schedule.csv"',
                         default="schedule.csv")
-    parser.add_argument('-s', '--show-graph', action='store_true', help='Whether the graph should be shown')
+    parser.add_argument('-g', '--graph', action='store_true', help='Whether the graph should be shown')
     parser.add_argument('-v', '--verbose', action='store_true', help='Prints additional graph and solution information')
-    parser.add_argument('-p', '--print-color-assignment', action='store_true',
-                        help='Prints additional graph and solution information')
+    parser.add_argument('-c', '--coloring', action='store_true', help='Prints the complete coloring')
     args = parser.parse_args()
 
     if args.output_file is None:
         args.output_file = "schedule.csv"
 
-    create_schedule(args.input_file.name, show_graph=args.show_graph, verbose=args.verbose,
-                    print_color_assignment=args.print_color_assignment, output_file=args.output_file)
+    create_schedule(args.input_file.name, show_graph=args.graph, verbose=args.verbose,
+                    print_color_assignment=args.coloring, output_file=args.output_file)
