@@ -70,8 +70,5 @@ This project is licensed under GNU General Public License v3.0 (GNU GPLv3). See 
 ## Run pre-commit
 `poetry run pre-commit run --all-files`
 
-## Run pytest
-`poetry run pytest .\tests\`
-
 ## Create documentation
 `.\docs\make html`
