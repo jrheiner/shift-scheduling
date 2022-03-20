@@ -15,7 +15,7 @@ os.environ["BENCHMARK_MODE"] = "ON"
 def benchmark_run(input_data, weeks):
     nodes, edges = s.create_schedule(input_data, output_file="benchmark_run.csv")
     r = []
-    for _ in range(2):
+    for _ in range(5):
         r.append(_single_run(input_data))
     return {
         "mean": np.mean(r),
@@ -28,7 +28,7 @@ def benchmark_run(input_data, weeks):
 
 def _single_run(input_data):
     t = timeit.Timer(functools.partial(s.create_schedule, input_data, output_file="benchmark_run.csv"))
-    return min(t.repeat(1, 1))
+    return min(t.repeat(5, 1))
 
 
 def plot_benchmark(list_of_runs: list, graph_labels: list, plot_title: str):
@@ -104,12 +104,14 @@ if __name__ == "__main__":
     results.append(benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13))
     print(results[1])
 
-    benchmark_config["soft_constraints"]["balanced_weekends"] = False
-    benchmark_config["shifts"] = 4
-    results.append(benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13))
-    print(results[2])
+    # benchmark_config["soft_constraints"]["balanced_weekends"] = False
+    # benchmark_config["shifts"] = 4
+    # results.append(benchmark_case(benchmark_config=benchmark_config, number_of_weeks=13))
+    # print(results[2])
 
-    plot_benchmark(results, graph_labels=["balanced_weekends = false", "balanced_weekends = true", "shifts = 4"],
+    plot_benchmark(results, graph_labels=["balanced_weekends = false", "balanced_weekends = true"],
                    plot_title="Time complexity")
+    # plot_benchmark(results, graph_labels=["balanced_weekends = false", "balanced_weekends = true", "shifts = 4"],
+    #                plot_title="Time complexity")
 
     os.remove("benchmark_run.csv")
