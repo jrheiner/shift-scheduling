@@ -3,11 +3,11 @@ import csv
 import datetime
 # import functools
 import json
+import os
 import pathlib
 import warnings
 from collections import Counter
 # import timeit
-from typing import Tuple
 
 import fuzzy_graph_coloring as fgc
 import matplotlib.pyplot as plt
@@ -22,7 +22,9 @@ def _parse_input(input_path: str) -> dict:
     :param input_path: Path to the input file
     :return: input data as dict
     """
-    with open(input_path, "r") as input_file, open("schema/input_schema.json") as schema_file:
+    root_dir = os.path.dirname(os.path.abspath(__file__))  # This is your Project Root
+    with open(input_path, "r") as input_file,\
+            open(os.path.join(root_dir, "schema", "input_schema.json")) as schema_file:
         schema = json.load(schema_file)
         input_data = json.load(input_file)
         validate(instance=input_data, schema=schema)
@@ -32,10 +34,6 @@ def _parse_input(input_path: str) -> dict:
 
     input_data["start_date"] = datetime.datetime.strptime(input_data["start_date"], "%Y-%m-%d")
     input_data["end_date"] = datetime.datetime.strptime(input_data["end_date"], "%Y-%m-%d")
-    input_data["period"] = (input_data["end_date"] - input_data["start_date"]).days + 1
-    assert input_data["period"] > 0, \
-        f"Invalid input. Start date ({input_data['start_date'].strftime('%Y-%m-%d')}) is after " \
-        f"end date ({input_data['end_date'].strftime('%Y-%m-%d')})."
     return input_data
 
 
@@ -70,6 +68,7 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, node_colors=None, draw
         color_map = plt.cm.tab20
     if node_colors and len(set(node_colors)) > 20:
         warnings.warn(f"Colormap only supports 20 different colors. Coloring has {len(set(node_colors))} colors.")
+        node_colors = [0 for _ in graph]
     pos = {s: (shifts_per_day * int(s.split(".")[0]) * 1.3 + int(s.split(".")[1]) + 0.3 * (int(s.split(".")[2]) % 2),
                int(s.split(".")[2]))
            for s in graph.nodes()}
@@ -86,21 +85,24 @@ def _draw_weighted_graph(graph: nx.Graph, shifts_per_day, node_colors=None, draw
     # plt.savefig("graph.png", dpi=300)
 
 
-def create_schedule(input_path: str, show_graph: bool = False, verbose: bool = False,
+def create_schedule(input_data: dict, show_graph: bool = False, verbose: bool = False,
                     print_color_assignment: bool = False, output_file: str = "schedule.csv"):
     """
     Create a work schedule based on the supplied input file.
     Writes schedule in output file 'schedule.csv' to disk.
 
-
-    :param input_path: Path to the input file
+    :param input_data: Configuration data
     :param show_graph: Flag whether the generated and colored graphs should be shown. Recommended only for small graphs.
     :param verbose: Flag whether number of nodes, edges, coloring scores, and final alpha should be printed
     :param print_color_assignment: Flag whether the complete color assignment dictionary should be printed
     :param output_file: Output file path
     :return:
     """
-    graph, input_data = generate_graph(input_path)
+    input_data["period"] = (input_data["end_date"] - input_data["start_date"]).days + 1
+    assert input_data["period"] > 0, \
+        f"Invalid input. Start date ({input_data['start_date'].strftime('%Y-%m-%d')}) is after " \
+        f"end date ({input_data['end_date'].strftime('%Y-%m-%d')})."
+    graph = generate_graph(input_data)
     if verbose:
         print(f"Graph has {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges.")
 
@@ -124,35 +126,40 @@ def create_schedule(input_path: str, show_graph: bool = False, verbose: bool = F
     if verbose:
         print(f"Alpha-cut using alpha={alpha}")
         print(f"Graph coloring has score of {score}")
-        print(f"Solution has a fairness score of {_calculate_fairness(fuzzy_coloring, print_distribution=verbose)}")
+        print(f"Solution has an unfairness score of {_calculate_fairness(fuzzy_coloring, print_distribution=verbose)}")
+
     interpret_graph(graph, fuzzy_coloring, input_data, output_file)
 
+    if bool(os.environ.get("BENCHMARK_MODE", False)):
+        return graph.number_of_nodes(), graph.number_of_edges()
 
-def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
+
+def generate_graph(input_data: dict) -> nx.Graph:
     """
     Builds a graph represented the unassigned shift schedule.
     Graph nodes are named following the convention: [D].[S].[P] e.g., 0.0.1 => 1st day, 1st shift, 2nd pos
 
-    :param input_path: Path to the input file
-    :return: Tuple(Graph, input_data)
+    :param input_data: Configuration data
+    :return: graph
     """
-    input_data = _parse_input(input_path)
     current_day_id = 0
+    first_working_day_processed = False
     while current_day_id < input_data["period"]:
         today = input_data["start_date"] + datetime.timedelta(days=current_day_id)
         yesterday = input_data["start_date"] + datetime.timedelta(days=current_day_id - 1)
-        if _get_weekday(today) not in input_data["days_of_week"]:
+        if _get_weekday(today) not in input_data["work_days"]:
             current_day_id += 1
             continue
         nodes = [f"{current_day_id}.{s}.{p}"
                  for s in range(input_data["shifts"])
                  for p in range(input_data["staff_per_shift"])]
         # [D].[S].[P] # 0.0.1 = Monika: 1st day, 1st shift, 2nd pos
-        if current_day_id == 0:
+        if not first_working_day_processed:
             graph = nx.complete_graph(nodes)
             nx.set_edge_attributes(graph, 1, "weight")
+            first_working_day_processed = True
             # Schicht: max(s)
-        elif _get_weekday(yesterday) in input_data["days_of_week"]:
+        elif _get_weekday(yesterday) in input_data["work_days"]:
             # Schicht: 0
             connect_nodes = [f"{current_day_id - 1}.{input_data['shifts'] - 1}.{p}" for p in
                              range(input_data["staff_per_shift"])]
@@ -175,9 +182,9 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
             balanced_weekends_constraint = False
         if balanced_weekends_constraint and _get_weekday(today) in ["Sa", "So"]:
             future_weekends_summands = [(7, 0.75), (14, 0.5), (21, 0.25)]
-            if _get_weekday(today) == "Sa" and "Su" in input_data["days_of_week"]:
+            if _get_weekday(today) == "Sa" and "Su" in input_data["work_days"]:
                 future_weekends_summands.extend([(8, 0.75), (15, 0.5), (22, 0.25)])
-            elif _get_weekday(today) == "Su" and "Sa" in input_data["days_of_week"]:
+            elif _get_weekday(today) == "Su" and "Sa" in input_data["work_days"]:
                 future_weekends_summands.extend([(6, 0.75), (13, 0.5), (20, 0.25)])
 
             # add the according IDs to list if period is not exceeded
@@ -198,7 +205,7 @@ def generate_graph(input_path: str) -> Tuple[nx.Graph, dict]:
             # ...to the future weekend nodes
             graph = nx.compose_all([graph2, graph])
         current_day_id += 1
-    return graph, input_data
+    return graph
 
 
 def fuzzy_color(graph: nx.Graph, k: int, verbose: bool = False):
@@ -248,7 +255,9 @@ def interpret_graph(graph: nx.Graph, coloring, input_data, output_file: str):
             assigned_staff = coloring.get(node)
             date = input_data["start_date"] + datetime.timedelta(days=d)
             csv_writer.writerow([_get_weekday(date), date.strftime("%Y-%m-%d"), s, p, assigned_staff])
-    print(f"Wrote staff timetable to '{output_file}'.")
+
+    if not bool(os.environ.get("BENCHMARK_MODE", False)):
+        print(f"Wrote staff timetable to '{output_file}'.")
 
 
 def _sort_key_nodes_factory(input_data):
@@ -296,12 +305,12 @@ def _calculate_fairness(coloring: dict, print_distribution: bool = False):
     Gives a score for the fairness of a coloring
     :param coloring: Color assignment
     :param print_distribution: Whether the shift distribution should be printed
-    :return: Negative coefficient of variation (as percentage) of assigned shifts per staff member
+    :return: Coefficient of variation (as percentage) of assigned shifts per staff member
     """
     shift_dist = list(Counter(coloring.values()).values())
     if print_distribution:
         print(f"Shift distribution: {shift_dist}")
-    return np.std(shift_dist) / np.mean(shift_dist) * - 100
+    return np.std(shift_dist) / np.mean(shift_dist) * 100
 
 
 if __name__ == '__main__':
@@ -312,14 +321,14 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output-file', type=pathlib.Path, nargs='?',
                         help='Shift scheduling output csv file. Defaults to "schedule.csv"',
                         default="schedule.csv")
-    parser.add_argument('-s', '--show-graph', action='store_true', help='Whether the graph should be shown')
+    parser.add_argument('-g', '--graph', action='store_true', help='Whether the graph should be shown')
     parser.add_argument('-v', '--verbose', action='store_true', help='Prints additional graph and solution information')
-    parser.add_argument('-p', '--print-color-assignment', action='store_true',
-                        help='Prints additional graph and solution information')
+    parser.add_argument('-c', '--coloring', action='store_true', help='Prints the complete coloring')
     args = parser.parse_args()
 
     if args.output_file is None:
         args.output_file = "schedule.csv"
 
-    create_schedule(args.input_file.name, show_graph=args.show_graph, verbose=args.verbose,
-                    print_color_assignment=args.print_color_assignment, output_file=args.output_file)
+    config_data = _parse_input(args.input_file.name)
+    create_schedule(config_data, show_graph=args.graph, verbose=args.verbose,
+                    print_color_assignment=args.coloring, output_file=args.output_file)
