@@ -23,7 +23,7 @@ def _parse_input(input_path: str) -> dict:
     :return: input data as dict
     """
     root_dir = os.path.dirname(os.path.abspath(__file__))  # This is your Project Root
-    with open(input_path, "r") as input_file,\
+    with open(input_path, "r") as input_file, \
             open(os.path.join(root_dir, "schema", "input_schema.json")) as schema_file:
         schema = json.load(schema_file)
         input_data = json.load(input_file)
@@ -162,14 +162,16 @@ def generate_graph(input_data: dict) -> nx.Graph:
             # Schicht: max(s)
         elif _get_weekday(yesterday) in input_data["work_days"]:
             # Schicht: 0
-            connect_nodes = [f"{current_day_id - 1}.{input_data['shifts'] - 1}.{p}" for p in
-                             range(input_data["staff_per_shift"])]
-            connect_nodes.extend([f"{current_day_id}.0.{p}" for p in range(input_data["staff_per_shift"])])
-            connect_days = nx.complete_graph(connect_nodes)
-            nx.set_edge_attributes(connect_days, 1, "weight")
+            if input_data["shifts"] > 1:
+                connect_nodes = [f"{current_day_id - 1}.{input_data['shifts'] - 1}.{p}" for p in
+                                 range(input_data["staff_per_shift"])]
+                connect_nodes.extend([f"{current_day_id}.0.{p}" for p in range(input_data["staff_per_shift"])])
+                connect_days = nx.complete_graph(connect_nodes)
+                nx.set_edge_attributes(connect_days, 1, "weight")
+
             graph2 = nx.complete_graph(nodes)
             nx.set_edge_attributes(graph2, 1, "weight")
-            graph = nx.compose_all([graph2, graph, connect_days])
+            graph = nx.compose_all([graph2, graph, connect_days] if input_data["shifts"] > 1 else [graph2, graph])
 
         else:
             graph2 = nx.complete_graph(nodes)
@@ -181,7 +183,7 @@ def generate_graph(input_data: dict) -> nx.Graph:
             balanced_weekends_constraint = input_data["soft_constraints"]["balanced_weekends"]
         except KeyError:
             balanced_weekends_constraint = False
-        if balanced_weekends_constraint and _get_weekday(today) in ["Sa", "So"]:
+        if balanced_weekends_constraint and _get_weekday(today) in ["Sa", "Su"]:
             future_weekends_summands = [(7, 0.75), (14, 0.5), (21, 0.25)]
             if _get_weekday(today) == "Sa" and "Su" in input_data["work_days"]:
                 future_weekends_summands.extend([(8, 0.75), (15, 0.5), (22, 0.25)])
