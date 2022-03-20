@@ -126,7 +126,8 @@ def create_schedule(input_data: dict, show_graph: bool = False, verbose: bool = 
     if verbose:
         print(f"Alpha-cut using alpha={alpha}")
         print(f"Graph coloring has score of {score}")
-        print(f"Solution has an unfairness score of {_calculate_fairness(fuzzy_coloring, print_distribution=verbose)}")
+        print("Solution has an unfairness score of "
+              f"{_calculate_unfairness(fuzzy_coloring, print_distribution=verbose)}")
 
     interpret_graph(graph, fuzzy_coloring, input_data, output_file)
 
@@ -300,9 +301,9 @@ def _get_weekday(date: datetime):
     return weekday.get(date.weekday())
 
 
-def _calculate_fairness(coloring: dict, print_distribution: bool = False):
+def _calculate_unfairness(coloring: dict, print_distribution: bool = False):
     """
-    Gives a score for the fairness of a coloring
+    Gives a score for the unfairness of a coloring
     :param coloring: Color assignment
     :param print_distribution: Whether the shift distribution should be printed
     :return: Coefficient of variation (as percentage) of assigned shifts per staff member
