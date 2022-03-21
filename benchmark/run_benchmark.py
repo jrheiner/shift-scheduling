@@ -52,7 +52,7 @@ def plot_benchmark(list_of_runs: list, graph_labels: list, plot_title: str):
     for idx, runs in enumerate(list_of_runs):
         y = np.array([run["mean"] for run in runs])
         y_std = np.array([run["std"] for run in runs])
-        ax.plot(x, y, "-", label=graph_labels[idx])
+        ax.plot(x, y, "-" if idx == 0 else "--", label=graph_labels[idx])
         ax.plot(x, y, "x", color=plt.gca().lines[-1].get_color())  # Add markers in the same color as line
         ax.fill_between(x, y - y_std, y + y_std, alpha=0.2)
 
@@ -60,6 +60,7 @@ def plot_benchmark(list_of_runs: list, graph_labels: list, plot_title: str):
     plt.ylabel("Execution time in seconds")
     plt.xlabel("Shift scheduling time frame in weeks (nodes)")
     plt.xticks(x, labels, rotation=45)
+    plt.grid(True)
     plt.legend()
     plt.show()
 
