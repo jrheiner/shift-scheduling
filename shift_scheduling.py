@@ -5,9 +5,9 @@ import datetime
 import json
 import os
 import pathlib
+# import timeit
 import warnings
 from collections import Counter
-# import timeit
 
 import fuzzy_graph_coloring as fgc
 import matplotlib.pyplot as plt
@@ -316,9 +316,25 @@ def _calculate_unfairness(coloring: dict, print_distribution: bool = False):
     return np.std(shift_dist) / np.mean(shift_dist) * 100
 
 
+def input_file_exists(p, arg):
+    try:
+        return open(arg, 'r')
+    except FileNotFoundError as e:
+        if arg == "default_input.json":  # Create default input file if it does not exist
+            with open("default_input.json", "w") as input_file, \
+                    open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema", "input_schema.json")) as s:
+                schema_data = json.load(s)
+                warnings.warn("No input file was provided and the default does not exist, therefore the file "
+                              "'default_input.json' was created.")
+                input_file.write(json.dumps(schema_data["examples"][0], indent=2))
+            return open("default_input.json", 'r')
+        else:  # If a custom input file does not exist, raise FileNotFoundError
+            raise e
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_file', type=argparse.FileType('r'), nargs='?',
+    parser.add_argument('input_file', type=lambda arg: input_file_exists(parser, arg), nargs='?',
                         help='Shift scheduling input file. Defaults to "default_input.json"',
                         default="default_input.json")
     parser.add_argument('-o', '--output-file', type=pathlib.Path, nargs='?',
